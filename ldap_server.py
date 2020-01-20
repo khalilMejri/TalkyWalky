@@ -1,4 +1,6 @@
 import ldap
+import hashlib
+from base64 import b64encode
 
 
 class LdapService():
@@ -7,16 +9,18 @@ class LdapService():
     ldap_ou = "security"  # organization unit
     ldap_group = "security-group"  # organization sub-group
 
-    def __init__(self, username, password):
+    # admin domain
+    LDAP_ADMIN_DN = "cn=admin,dc=insat,dc=tn"
+    LDAP_ADMIN_PWD = ""
+
+    def __init__(self, admin_pwd):
+        self.LDAP_ADMIN_PWD = admin_pwd
+
+    def login(self, username, password):
         self.username = username
         self.password = password
 
-    def login(self):
-
         # the following is the user_dn format provided by the ldap server
-
-        # admin domain
-        # user_dn = "cn=admin,dc=insat,dc=tn"
 
         # organization user's domain
         user_dn = "cn=" + self.username + ",cn=" + self.ldap_group + ",ou=" + \
@@ -25,7 +29,8 @@ class LdapService():
         print(user_dn)
 
         # base domain
-        base_dn = "cn=" + self.ldap_group + ",ou=" + self.ldap_ou + ",dc=insat,dc=tn"
+        LDAP_BASE_DN = "cn=" + self.ldap_group + \
+            ",ou=" + self.ldap_ou + ",dc=insat,dc=tn"
 
         # start connection
         ldap_client = ldap.initialize(self.ldap_server)
@@ -36,7 +41,7 @@ class LdapService():
             # if authentication successful, get the full user data
             ldap_client.bind_s(user_dn, self.password)
             result = ldap_client.search_s(
-                base_dn, ldap.SCOPE_SUBTREE, search_filter)
+                LDAP_BASE_DN, ldap.SCOPE_SUBTREE, search_filter)
 
             # return all user data results
             ldap_client.unbind_s()
@@ -54,11 +59,53 @@ class LdapService():
             print("Authentication error!")
             return "Authentication error!"
 
-    def register(self):
+    def register(self, user):
 
-        # custom user domain
-        m_user_dn = "cn=" + self.username + ",dc=insat,dc=tn"
+        # base domain
+        LDAP_BASE_DN = "cn=" + self.ldap_group + \
+            ",ou=" + self.ldap_ou + ",dc=insat,dc=tn"
+        # home base
+        HOME_BASE = "/home/users"
 
+        # new user domain
+        dn = 'cn=' + user['username'] + ',' + LDAP_BASE_DN
+        home_dir = HOME_BASE + '/' + user['username']
+        gid = user['group_id']
+
+        # encoding password using md5 hash function
+        hashed_pwd = hashlib.md5(user['password'].encode("UTF-8"))
+
+        # printing the equivalent byte value.
+        # print("The byte equivalent of hash is : ", end="")
+        # print(result.hexdigest())
+
+        entry = []
+        entry.extend([
+            ('objectClass', [b'inetOrgPerson',
+                             b'posixAccount', b'top']),
+            ('uid', user['username'].encode("UTF-8")),
+            ('givenname', user['username'].encode("UTF-8")),
+            ('sn', user['username'].encode("UTF-8")),
+            ('mail', user['email'].encode("UTF-8")),
+            ('uidNumber', user['uid'].encode("UTF-8")),
+            ('gidNumber', str(gid).encode("UTF-8")),
+            ('loginShell', [b'/bin/sh']),
+            ('homeDirectory', home_dir.encode("UTF-8")),
+            ('userPassword', [b'{md5}' +
+                              b64encode(hashed_pwd.digest())])
+
+        ])
+
+        # connect to host with admin
+        ldap_conn = ldap.initialize(self.ldap_server)
+        ldap_conn.simple_bind_s(self.LDAP_ADMIN_DN, self.LDAP_ADMIN_PWD)
+
+        try:
+            # add entry in the directory
+            ldap_conn.add_s(dn, entry)
+        finally:
+            # disconnect and free memory
+            ldap_conn.unbind_s()
 
 # TESTING CONNECTION, also IGNORE the ERRORS since there's NO ERROR,
 # dunno why they are being thrown,
@@ -67,6 +114,19 @@ class LdapService():
 
 
 # # test case
-# s = LdapService(username="guest", password="0000")
-# s.login()
-# s.register()
+# TODO change admin password
+s = LdapService(admin_pwd="<ur_admin_pwd>")
+
+# test login
+s.login(username="guest", password="0000")
+
+# test registration
+user_obj = {
+    'username': 'guest',
+    'password': '0000',
+    'email': 'u@gmail.com',
+    'gender': 'male',
+    'group_id': 500,  # default gid
+    'uid': '1600222'  # student card
+}
+# s.register(user_obj)
