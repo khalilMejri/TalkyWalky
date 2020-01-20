@@ -16,9 +16,9 @@ class LdapService():
         # the following is the user_dn format provided by the ldap server
 
         # admin domain
-        # user_dn = "cn="+self.username+",dc=insat,dc=tn"
+        # user_dn = "cn=admin,dc=insat,dc=tn"
 
-        # organization user domain
+        # organization user's domain
         user_dn = "cn=" + self.username + ",cn=" + self.ldap_group + ",ou=" + \
             self.ldap_ou + ",dc=insat,dc=tn"
 
@@ -56,10 +56,8 @@ class LdapService():
 
     def register(self):
 
-        # the following is the user_dn format provided by the ldap server
-
-        # admin domain
-        user_dn = "cn="+self.username+",dc=insat,dc=tn"
+        # custom user domain
+        m_user_dn = "cn=" + self.username + ",dc=insat,dc=tn"
 
 
 # TESTING CONNECTION, also IGNORE the ERRORS since there's NO ERROR,
