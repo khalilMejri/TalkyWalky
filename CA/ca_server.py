@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+import pika
 from os import path
 import datetime
+from OpenSSL.crypto import verify # verifying function doesn't exist in cryptography module
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -66,7 +68,7 @@ def generate_or_load():
         # Write our certificate out to disk.
         with open(CA_CERT_PATH, "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
-
+    return (key,cert)
 
 def handle_cert_req(CSR_PATH):
     if(path.exists(CSR_PATH) and path.isfile(CSR_PATH)):
@@ -96,15 +98,84 @@ def handle_cert_req(CSR_PATH):
     else:
         print('No Request to handle')
 
-
-def authenticate():
-    
+def handle_req(reqData,cert):
+    csr = x509.load_pem_x509_csr(reqData,default_backend())
+    cert_client = x509.CertificateBuilder().subject_name(
+            csr.subject
+            ).issuer_name(
+            cert.subject
+            ).public_key(
+            csr.public_key()
+            ).serial_number(
+            x509.random_serial_number()
+            ).not_valid_before(
+            datetime.datetime.utcnow()
+            ).not_valid_after(
+            # Our CA certificate will be valid for 7 day
+            datetime.datetime.utcnow() + datetime.timedelta(days=7)
+        )
+    for ext in csr.extensions:
+        cert_client.add_extension(ext.value,ext.critical)
+        
+    cert_client = cert_client.sign(key, hashes.SHA256(), default_backend())  
+    return    cert_client.public_bytes(serialization.Encoding.PEM).decode()
+def handle_cert():
+    if(path.exists('client_cert.pem') and path.isfile('client_cert.pem')):
+        pass
+    else:
+        print('No certification exists for client')
+    pass
 
 # First step is created a ROOT certificate (self signed certificate for the authority)
-generate_or_load()
+#generate_or_load()
 
 # Second is handling any certificate request and sign it using the ROOT certificate
-handle_cert_req('client_csr.pem')
+#andle_cert_req('client_csr.pem')
 
 
 
+class CaServer:
+    
+    def generate_authority_key(self):
+        self.ca_key,self.ca_cert = generate_or_load()
+        
+    def connect(self):
+        self.generate_authority_key()
+        self.connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
+        self.channel = self.connection.channel()
+        self.receive()
+    def send(self,client_queue,reqData):
+
+        self.channel.exchange_declare(exchange='cert_exchange', exchange_type='direct')
+        self.channel.queue_declare(queue=client_queue, durable=True)
+
+        message = handle_req(reqData,self.ca_cert)
+        self.channel.basic_publish(
+            exchange='cert_exchange',
+            routing_key=client_queue,
+            body=message,
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # make message persistent
+            ))
+        print('Server sended cert to '+str(client_queue))
+
+    def receive(self):
+        self.channel.queue_declare(queue='cert_req_queue', durable=True)
+
+        def callback(ch, method, properties, body):
+            print(body)
+            client_queue, cert_req = body.decode().split(':')
+            cert_req = cert_req.encode()
+            print('Server Dealing with '+str(client_queue))
+            self.send(client_queue,cert_req)
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+
+        
+        self.channel.basic_consume(queue='cert_req_queue', on_message_callback=callback)
+        print('Server Started !! Listening')
+        self.channel.start_consuming()
+
+
+server = CaServer()
+server.connect()
