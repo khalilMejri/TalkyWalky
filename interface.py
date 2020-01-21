@@ -7,6 +7,8 @@ import tkinter as tk
 import webbrowser
 from sender import SenderBroker
 from receiver import ReceiverBroker
+from Crypto.PublicKey import RSA
+from encryption_decryption import rsa_encrypt, rsa_decrypt
 
 saved_username = ["You"]
 
@@ -351,13 +353,31 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         user_name = saved_username[-1]
         self.send_message(user_name)
 
+    # get rsa key from file
+    def get_rsa_key(self, filepath):
+        with open(filepath, mode='rb') as private_file:
+            priv_key_data = private_file.read()
+            private_key = RSA.importKey(priv_key_data)
+            #print(private_key.export_key())
+            return private_key
+    
     # joins username with message into publishable format
     def send_message(self, username):
 
         user_input = self.entry_field.get()
+        currentRoom = self.usersPanel.get(ANCHOR)
+        currentRoom = currentRoom.replace(" ", "")
+        print(currentRoom)
+        
+        # get current room public key
+        currentRoomPublicKey = self.get_rsa_key("./chatrooms-keys/"+currentRoom).publickey().export_key()
+        #print (currentRoomPublicKey)
+        
+        # now, we'll encrypt the message before sending it to rabbitmq
+        user_input = rsa_encrypt(user_input, currentRoomPublicKey)
 
         username = saved_username[-1] + ": "
-        message = (username, user_input)
+        message = (username, user_input.decode())
         readable_msg = ''.join(message)
         readable_msg.strip('{')
         readable_msg.strip('}')
@@ -380,6 +400,11 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         except AttributeError:
             pass
 
+        '''currentRoom = self.usersPanel.get(ANCHOR)
+        currentRoom = currentRoom.replace(" ", "")
+        currentRoomPrivateKey = self.get_rsa_key("./chatrooms-keys/"+currentRoom).export_key()
+        message = rsa_decrypt(message, currentRoomPrivateKey)'''
+        
         self.text_box.configure(state=NORMAL)
         self.text_box.insert(END, str(time.strftime('%I:%M:%S ')) + message)
         self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
