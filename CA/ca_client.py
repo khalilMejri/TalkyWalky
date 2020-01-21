@@ -74,13 +74,14 @@ class CaClient:
         pika.ConnectionParameters(host='localhost'))
         self.channel = self.connection.channel()
         self.receive()
-        self.send()
+        data = self.generateCertRequest()
+        self.send('request',data)
         self.channel.start_consuming()
-    def send(self):
+    def send(self,action,data):
 
         self.channel.queue_declare(queue='cert_req_queue', durable=True)
-
-        message = self.queue_name +':' + str(self.generateCertRequest())
+        message = self.queue_name +'::' + action +'::' + str(data)
+        
         self.channel.basic_publish(
         exchange='',
         routing_key='cert_req_queue',
@@ -89,7 +90,8 @@ class CaClient:
             delivery_mode=2,  # make message persistent
         ))
         print('Client send request with queue '+str(self.queue_name))
-        
+    
+
         
     def receive(self):
         
@@ -99,11 +101,16 @@ class CaClient:
         self.channel.queue_bind(exchange='cert_exchange', queue=result.method.queue,routing_key=self.queue_name)
 
         def callback(ch, method, properties, body):
-            certifData = body
-            handle_cert(certifData)
-            print('Client '+str(self.queue_name),' gets '+str(certifData[:15]))
-            self.channel.close()
-            self.connection.close()
+            action,data = body.decode().split('::')
+            
+            if(action == 'certif'):
+                print('Client '+str(self.queue_name),' gets  certif '+str(data[:15]))
+                #certification = handle_cert(data)
+                self.send('verify',data)
+            if(action == 'verify'):
+                print('Cert Verification result',str(data))
+                self.channel.close()
+                self.connection.close()
         self.channel.basic_consume(
             queue=result.method.queue, on_message_callback=callback, auto_ack=True)
 
