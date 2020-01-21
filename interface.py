@@ -342,8 +342,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         else:
             # closes change username window, adds username to list, and displays notification
             self.close_username_window()
+            saved_username.append(username)
             write_usernames()
-            self.send_message_insert("Username changed to " + '"' + username + '".')
+            self.send_message_insert("Username changed to " + '"' + username + '".\n')
 
     # allows "enter" key for sending msg
     def send_message_event(self, event):
