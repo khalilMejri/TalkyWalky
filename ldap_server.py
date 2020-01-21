@@ -1,5 +1,6 @@
 import ldap
 import hashlib
+import sys
 from base64 import b64encode
 
 
@@ -103,6 +104,10 @@ class LdapService():
         try:
             # add entry in the directory
             ldap_conn.add_s(dn, entry)
+            return None
+        except Exception:
+            return sys.exc_info()[0]
+
         finally:
             # disconnect and free memory
             ldap_conn.unbind_s()
@@ -118,7 +123,7 @@ class LdapService():
 s = LdapService(admin_pwd="<ur_admin_pwd>")
 
 # test login
-s.login(username="guest", password="0000")
+# s.login(username="guest", password="0000")
 
 # test registration
 user_obj = {

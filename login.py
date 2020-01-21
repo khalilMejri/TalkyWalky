@@ -8,8 +8,8 @@ def Login(event=None):
         error_label.config(
             text="Please complete the required field!", fg="#0F0F0F", bg="#33FF33")
     else:
-        ldap_s = LdapService(username=USERNAME.get(), password=PASSWORD.get())
-        result = ldap_s.login()
+        ldap_s = LdapService(admin_pwd="<ur_admin_pwd>")
+        result = ldap_s.login(username=USERNAME.get(), password=PASSWORD.get())
         if not result:
             # HomeWindow()
             USERNAME.set("")
