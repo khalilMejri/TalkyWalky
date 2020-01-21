@@ -170,6 +170,7 @@ class CaServer:
             print('Server Dealing with '+str(client_queue))
             self.send(client_queue,cert_req)
             ch.basic_ack(delivery_tag=method.delivery_tag)
+            
 
         
         self.channel.basic_consume(queue='cert_req_queue', on_message_callback=callback)
