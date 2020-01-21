@@ -63,4 +63,4 @@ def rsa_decrypt(encrypted_message, receiver_private_key):
     return decrypted_message
 
 #FOR TESTING! SINCE WE DON'T HAVE RSA KEY PAIRS LOCALLY
-rsa_encrypt_decrypt()
+#rsa_encrypt_decrypt()
