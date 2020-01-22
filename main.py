@@ -17,18 +17,17 @@ def on_closing():
 sender = SenderBroker()
 listener = ReceiverBroker()
 
-sender.connect(exchange="room 1")
-listener.connect(exchange="room 1")
+#sender.connect(exchange="room 1")
+#listener.connect(exchange="room 1")
 
 app = ChatInterface(root, sender_broker=sender, receiver_broker=listener)
 # connect
 app.connect_to_server('JOE')
 
 # do what u want
-app.get_rooms()
-app.get_connected_users()
-app.select_room('room1')
-app.send_msg_to_room('room1', 'hello man!')
+
+#app.select_room('room1')
+#app.send_msg_to_room('room1', 'hello man!')
 
 # start consuming
 app.async_consumer()

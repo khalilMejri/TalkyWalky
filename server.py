@@ -66,7 +66,7 @@ class Server:
             demanded_user_name = tokens[1]
             for key,val in self.connected_users.items():
                 if val == demanded_user_name:
-                    self.send(queue_name,"userQueue::"+str(key))
+                    self.send(queue_name,"username::"+str(val)+"userQueue::"+str(key))
                     return True
             self.send(queue_name,"notfound::")
             return False
@@ -82,17 +82,18 @@ class Server:
             room = tokens[1]
             if(queue_name in self.connected_users.keys()):
                 self.rooms[room].append(queue_name)
-                self.send(queue_name,"joined::")
+                self.send(queue_name,"joinedRoom::"+room+'::')
                 return True
             self.send(queue_name,"notfound::")
             return False
         elif action == 'sendToRoom':
             queue_name = tokens[0]
+            user_name = self.connected_users[queue_name]
             room = tokens[1]
             message = tokens[2]
             if(queue_name in self.connected_users.keys() and queue_name in self.rooms[room]):
                 for queue in self.rooms[room]:
-                    self.send(queue,'roomReceive::'+room+'::'+message)
+                    self.send(queue,'roomReceive::'+room+'::'+user_name+'::'+message)
                 return True
             else :
                 self.send(queue_name,'notfound::')
@@ -102,7 +103,7 @@ class Server:
             room = tokens[1]
             if(queue_name in self.connected_users.keys() and queue_name in self.rooms[room]):
                 self.rooms[room].remove(queue_name)
-                self.send(queue_name,"leaved::")
+                self.send(queue_name,"left::"+room+'::')
                 return True
             self.send(queue_name,"notfound::")
             return False

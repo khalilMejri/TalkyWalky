@@ -53,13 +53,15 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
     def __init__(self, master=None, sender_broker=None, receiver_broker=None):
         Frame.__init__(self, master)
         self.master = master
-        self.sender_broker = sender_broker
-        self.receiver_broker = receiver_broker
-        self.username = '' #LDAP LOGIN RETURNS LATER
+        self.selectedRoom=''
+        self.talking_users = {}
+        #self.sender_broker = sender_broker
+        #self.receiver_broker = receiver_broker
+        self.username = 'USERNAME' #LDAP LOGIN RETURNS LATER
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
-        self.connection = pika.BlockingConnection(
-            pika.ConnectionParameters(host='localhost'))
-
+        self.connect_to_server(self.username)
+        self.get_rooms()
+        self.get_connected_users()
         # sets default bg for top level windows
         self.tl_bg = "#EEEEEE"
         self.tl_bg2 = "#EEEEEE"
@@ -320,11 +322,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.channel = self.connection.channel()
         self.create_queue()
         self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
-        self.send_request_to_server(self.channel,"login::"+self.queue_name[4:]+"::"+username)
-        
+        self.async_consumer()
 
-    def send_request_to_server(self, channel, message):
-        channel.basic_publish(
+    def send_request_to_server(self, message):
+        self.channel.basic_publish(
         exchange='',
         routing_key='main_queue',
         body=message,
@@ -334,25 +335,25 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         print('Client send request with queue '+str(self.queue_name),message)
         
     def get_connected_users(self):
-        self.send_request_to_server(self.channel,"getConnectedUsers::"+self.queue_name[4:]+"::")
+        self.send_request_to_server("getConnectedUsers::"+self.queue_name[4:]+"::")
         
     def get_user_data(self, dest_username):
-        self.send_request_to_server(self.channel,"getUserData::"+self.queue_name[4:]+"::"+dest_username)
+        self.send_request_to_server("getUserData::"+self.queue_name[4:]+"::"+dest_username)
 
     def get_rooms(self):
-        self.send_request_to_server(self.channel,"getRooms::"+self.queue_name[4:]+"::")
+        self.send_request_to_server("getRooms::"+self.queue_name[4:]+"::")
     
     def select_room(self, room):
-        self.send_request_to_server(self.channel,"joinRoom::"+self.queue_name[4:]+"::"+room)
+        self.send_request_to_server("joinRoom::"+self.queue_name[4:]+"::"+room)
         
     def send_msg_to_room(self, room, message):
-        self.send_request_to_server(self.channel,"sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
+        self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
         
     def leave_room(self, room):
-        self.send_request_to_server(self.channel,"leaveRoom::"+self.queue_name[4:]+"::"+room)
+        self.send_request_to_server("leaveRoom::"+self.queue_name[4:]+"::"+room)
         
     def disconnect_from_server(self):
-        self.send_request_to_server(self.channel,"quit::"+self.queue_name[4:]+"::"+self.username)
+        self.send_request_to_server("quit::"+self.queue_name[4:]+"::"+self.username)
 
     def listen_channel(self):
         self.channel.basic_consume(
@@ -441,7 +442,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         #user_input = rsa_encrypt(user_input, currentRoomPublicKey)
 
         username = saved_username[-1] + ": "
-        message = (username, user_input)
+        message = user_input
         readable_msg = ''.join(message)
         readable_msg.strip('{')
         readable_msg.strip('}')
@@ -452,7 +453,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             # self.send_message_insert(readable_msg)
             
             # broadcast messages in this room
-            self.sender_broker.send_message(readable_msg + '\n')
+            self.send_msg_to_room(self.selectedRoom,message)
 
 
     # inserts user input into text box
@@ -478,9 +479,38 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
     # callback on broker triggered
     def on_message_recieved(self, ch, method, properties, body):
-        print(" [x] %r" % body.decode('UTF-8'))
-        self.send_message_insert(body.decode('UTF-8'))
-
+        
+        tokens = body.decode().split('::')
+        action = tokens[0]
+        if action =='connected':
+            print('Connected')
+            # connected treatement
+        elif action =='disconnected':
+            print('Disconnected')
+            pass
+        elif action =='connectedUsers':
+            users_names = tokens[1].split(',')
+            print('Connected users: ',users_names)
+            # TODO show the users
+        elif action =='userQueue':
+            username = tokens[1]
+            demanded_user_queue = tokens[2]
+            print('Demanded user: ',username,demanded_user_queue)
+        elif action == 'rooms':
+            rooms == tokens[1].split(',')
+            print('Received rooms ',rooms)
+        elif action =='joinedRoom':
+            joinedRoom = tokens[1]
+            self.selectedRoom = joinedRoom
+            print('Joined room: ',joinedRoom)
+        elif action =='roomReceive':
+            room = tokens[1]
+            username = tokens[2]
+            message = tokens[3]
+            print('Received msg at room, ',room,username,message)
+        elif action =='left':
+            room = tokens[1]
+            print('Leaving room ',room)
 
     def on_room_select(self, evt):
         # Note here that Tkinter passes an event object to onselect()
@@ -488,14 +518,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         index = int(w.curselection()[0])
         value = w.get(index)
         print('You selected room : "%s"' % value)
+        
+        #Switching room
+        if(self.selectedRoom != ''):
 
-        # switch room
-        self.sender_broker.disconnect()
-        self.receiver_broker.discard_channel()
-        # reconnect
-        self.sender_broker.connect(exchange=value)
-        self.receiver_broker.connect(exchange=value)
-        self.receiver_broker.async_consumer(self.on_message_recieved)
+            self.leave_room(self.selectedRoom)
+        self.select_room(value)
+        
 
     
     # closes change username window
