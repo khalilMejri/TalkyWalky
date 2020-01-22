@@ -314,6 +314,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
     def connect_to_server(self, username):
         #SenderBroker.connect(self, exchange='main_queue')
+        self.username = username
         self.connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
         self.channel = self.connection.channel()

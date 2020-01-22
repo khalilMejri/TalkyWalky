@@ -9,6 +9,7 @@ def on_closing():
     # check if saving
     # if not:
     listener.discard_channel()
+    app.disconnect_from_server()
     root.destroy()
 
 
@@ -26,6 +27,8 @@ app.connect_to_server('JOE')
 # do what u want
 app.get_rooms()
 app.get_connected_users()
+app.select_room('room1')
+app.send_msg_to_room('room1', 'hello man!')
 
 # start consuming
 app.async_consumer()
