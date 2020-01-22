@@ -50,13 +50,11 @@ else:
 
 class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
-    def __init__(self, master=None, sender_broker=None, receiver_broker=None):
+    def __init__(self, master=None):
         Frame.__init__(self, master)
         self.master = master
         self.selectedRoom=''
         self.talking_users = {}
-        #self.sender_broker = sender_broker
-        #self.receiver_broker = receiver_broker
         self.username = 'USERNAME' #LDAP LOGIN RETURNS LATER
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
         self.connect_to_server(self.username)
@@ -357,7 +355,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
     def listen_channel(self):
         self.channel.basic_consume(
-            queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+            queue=self.queue_name, on_message_callback=self.on_message_recieved)
         self.channel.start_consuming()
         print("shutdown broker!")
 

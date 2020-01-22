@@ -20,7 +20,7 @@ listener = ReceiverBroker()
 #sender.connect(exchange="room 1")
 #listener.connect(exchange="room 1")
 
-app = ChatInterface(root, sender_broker=sender, receiver_broker=listener)
+app = ChatInterface(root)
 # connect
 app.connect_to_server('JOE')
 

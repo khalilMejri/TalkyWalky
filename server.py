@@ -12,11 +12,6 @@ class Server:
 
     def receive(self):
         self.channel.queue_declare(queue='main_queue', durable=True)
-        self.channel.queue_declare(queue='room1', durable=True)
-        self.channel.queue_declare(queue='room2', durable=True)
-        self.channel.queue_declare(queue='room3', durable=True)
-        self.channel.queue_declare(queue='room4', durable=True)
-
         def callback(ch, method, properties, body):
             # Received a Message
             
