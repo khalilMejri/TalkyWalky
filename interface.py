@@ -324,19 +324,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.async_consumer()
 
     def send_request_to_server(self, message):
-
-        t = Thread(target = lambda :
-            self.channel.basic_publish(
-            exchange='',
-            routing_key='main_queue',
-            body=message,
-            properties=pika.BasicProperties(
-                delivery_mode=2,  # make message persistent
-            ))
-        )
-        t.start()
-        
+        sender = SenderBroker('main_queue')
         print('Client send request with queue '+str(self.queue_name),message)
+        sender.send_message(message)
+        
         
     def get_connected_users(self):
         self.send_request_to_server("getConnectedUsers::"+self.queue_name[4:]+"::")
