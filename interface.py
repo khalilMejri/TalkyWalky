@@ -317,9 +317,6 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.create_queue()
         self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
         self.send_request_to_server(self.channel,"login::"+self.queue_name[4:]+"::"+username)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
         
 
     def send_request_to_server(self, channel, message):
@@ -334,48 +331,33 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         
     def get_connected_users(self):
         self.send_request_to_server(self.channel,"getConnectedUsers::"+self.queue_name[4:]+"::")
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
         
     def get_user_data(self, dest_username):
         self.send_request_to_server(self.channel,"getUserData::"+self.queue_name[4:]+"::"+dest_username)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
 
     def get_rooms(self):
         self.send_request_to_server(self.channel,"getRooms::"+self.queue_name[4:]+"::")
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
     
     def select_room(self, room):
         self.send_request_to_server(self.channel,"joinRoom::"+self.queue_name[4:]+"::"+room)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
         
     def send_msg_to_room(self, room, message):
         self.send_request_to_server(self.channel,"sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
         
     def leave_room(self, room):
         self.send_request_to_server(self.channel,"leaveRoom::"+self.queue_name[4:]+"::"+room)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming() 
         
     def disconnect_from_server(self):
         self.send_request_to_server(self.channel,"quit::"+self.queue_name[4:]+"::"+self.username)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
 
-    def async_consumer(self, handler, params=None):
-        worker = Thread(target=handler, kwargs=params)
+    def listen_channel(self):
+        self.channel.basic_consume(
+            queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+        print("shutdown broker!")
+
+    def async_consumer(self):
+        worker = Thread(target=self.listen_channel)
         worker.start()
 
 # Send Message

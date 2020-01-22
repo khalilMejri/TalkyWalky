@@ -20,9 +20,16 @@ sender.connect(exchange="room 1")
 listener.connect(exchange="room 1")
 
 app = ChatInterface(root, sender_broker=sender, receiver_broker=listener)
-app.async_consumer(app.connect_to_server, params={'username': 'JOE'})
-app.async_consumer(app.get_rooms)
-app.async_consumer(app.get_connected_users)
+# connect
+app.connect_to_server('JOE')
+
+# do what u want
+app.get_rooms()
+app.get_connected_users()
+
+# start consuming
+app.async_consumer()
+
 app.default_format()
 
 listener.async_consumer(app.on_message_recieved)
