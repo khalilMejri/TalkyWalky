@@ -493,10 +493,14 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             users_names = tokens[1].split(',')
             print('Connected users: ',users_names)
             # TODO show the users
-        elif action =='userQueue':
+        elif action =='username':
             username = tokens[1]
             demanded_user_queue = tokens[2]
             print('Demanded user: ',username,demanded_user_queue)
+        elif action =='choosed':
+            calling_username = tokens[1]
+            calling_user_queue = tokens[2]
+            print('Have been demanded from ', calling_username,calling_user_queue)
         elif action == 'rooms':
             rooms = tokens[1].split(',')
             print('Received rooms ',rooms)

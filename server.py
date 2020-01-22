@@ -61,6 +61,7 @@ class Server:
             demanded_user_name = tokens[1]
             for key,val in self.connected_users.items():
                 if val == demanded_user_name:
+                    self.send(key,"choosed::"+self.connected_users[queue_name]+'::'+queue_name)
                     self.send(queue_name,"username::"+str(val)+"userQueue::"+str(key))
                     return True
             self.send(queue_name,"notfound::")
