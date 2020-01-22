@@ -466,7 +466,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         message = rsa_decrypt(message, currentRoomPrivateKey)'''
         
         self.text_box.configure(state=NORMAL)
-        self.text_box.insert(END, str(time.strftime('%I:%M:%S ')) + message)
+        self.text_box.insert(END, str(time.strftime('%I:%M:%S ')) + message+'\n')
         self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
         self.text_box.see(END)
         self.text_box.configure(state=DISABLED)
@@ -503,6 +503,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             username = tokens[2]
             message = tokens[3]
             print('Received msg at room, ',room,username,message)
+            self.send_message_insert("[%s] %s : %s"%(room,username,message))
         elif action =='left':
             room = tokens[1]
             print('Leaving room ',room)
