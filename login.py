@@ -1,6 +1,6 @@
 from tkinter import Label, Entry, Button, Tk, Radiobutton, IntVar, StringVar, Toplevel, Canvas, X
 from ldap_server import LdapService
-
+from CA.ca_client import CaClient, handle_cert_local
 import time
 
 
@@ -18,10 +18,18 @@ class LoginPage:
             if not result:
                 self.USERNAME.set("")
                 self.PASSWORD.set("")
-                self.error_label.config(
-                    text="Sucess", fg="#33FF33", bg="#336633")
+                # self.error_label.config(
+                #     text="Sucess", fg="#33FF33", bg="#336633")
 
-                self.HomeWindow()
+                client = CaClient(self.USERNAME)
+                client.connect()
+                client.verify_cert()
+
+                if client.cert_is_ok == "Ok":
+                    self.HomeWindow()
+                else:
+                    self.error_label.config(
+                        text="Access denied -- Pirate Alert --", fg="#0F0F0F", bg="#33FF33")
 
             else:
                 self.error_label.config(
@@ -29,6 +37,7 @@ class LoginPage:
 
     def HomeWindow(self):
         self.root.withdraw()
+        # import loading
         import main
 
     def navigate_to_signup(self):

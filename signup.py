@@ -1,6 +1,6 @@
 from tkinter import Label, Entry, Button, Tk, Radiobutton, IntVar, StringVar, Toplevel, Canvas, X
 from ldap_server import LdapService
-
+from CA.ca_client import CaClient, handle_cert_local
 import time
 
 
@@ -14,18 +14,19 @@ class SignupPage:
         else:
             # user object
             user_obj = {
-                'self.USERNAME': self.USERNAME.get(),
-                'self.PASSWORD': self.PASSWORD.get(),
-                'self.EMAIL': self.EMAIL.get(),
-                'self.GENDER': self.GENDER.get(),
+                'username': self.USERNAME.get(),
+                'password': self.PASSWORD.get(),
+                'email': self.EMAIL.get(),
+                'gender': self.GENDER.get(),
                 'group_id': 500,  # default gid
-                'self.UID': self.UID.get()  # student card
+                'uid': self.UID.get()  # student card
             }
-            # print(user_obj)
+            print(user_obj)
             # instantiate the ldap service
             # ldap_s = LdapService(admin_pwd="<ur_admin_pwd>")
             ldap_s = LdapService(admin_pwd="0927khalil")
             result = ldap_s.register(user_obj)
+
             if not result:
                 # HomeWindow()
                 self.USERNAME.set("")
@@ -37,7 +38,16 @@ class SignupPage:
                 self.error_label.config(
                     text="Sucess", fg="#33FF33", bg="#336633")
 
-                self.HomeWindow()
+                # handle certificate
+                client = CaClient(self.USERNAME)
+                client.connect()
+                client.request_cert()
+                result = handle_cert_local('CA/client_cert.pem')
+                if result:
+                    self.HomeWindow()
+                else:
+                    self.error_label.config(
+                        text="Error occured while obtaining SSL certificate", fg="#0F0F0F", bg="#33FF33")
 
             else:
                 self.error_label.config(
