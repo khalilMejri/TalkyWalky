@@ -8,7 +8,7 @@ from receiver import ReceiverBroker
 def on_closing():
     # check if saving
     # if not:
-    #listener.discard_channel()
+    # listener.discard_channel()
     app.disconnect_from_server()
     root.destroy()
 
@@ -22,19 +22,20 @@ def on_closing():
 
 app = ChatInterface(root)
 # connect
-#app.connect_to_server('JOE')
+# app.connect_to_server('JOE')
 
 # do what u want
 
-#app.select_room('room1')
+# app.select_room('room1')
 #app.send_msg_to_room('room1', 'hello man!')
 
 # start consuming
-#app.async_consumer()
+# app.async_consumer()
 
 app.default_format()
 
-#listener.async_consumer(app.on_message_recieved)
+
+# listener.async_consumer(app.on_message_recieved)
 
 root.protocol('WM_DELETE_WINDOW', on_closing)  # root is your root window
 

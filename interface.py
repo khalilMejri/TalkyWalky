@@ -54,6 +54,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         Frame.__init__(self, master)
         self.master = master
         self.selectedRoom=''
+        self.selectedUser=''
         self.talking_users = {}
         self.username = 'USERNAME' #LDAP LOGIN RETURNS LATER
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
@@ -124,6 +125,14 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # default window size
         options.add_command(label="Default Window Size", command=self.default_window_size)
 
+     # Rooms
+        help_option = Menu(menu, tearoff=0)
+        menu.add_cascade(label="Rooms", menu=help_option)
+        help_option.add_command(label="room 1", command=lambda : self.on_room_select("room 1"))
+        help_option.add_command(label="room 2", command=lambda : self.on_room_select("room 2"))
+        help_option.add_command(label="room 3", command=lambda : self.on_room_select("room 3"))
+
+
     # Help
         help_option = Menu(menu, tearoff=0)
         menu.add_cascade(label="Help", menu=help_option)
@@ -146,13 +155,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.users_frame.pack(fill=BOTH, side=RIGHT)
         
         self.usersPanel= Listbox(self.users_frame, selectmode=SINGLE)
-        self.usersPanel.insert(1,"ROOM 1")
-        self.usersPanel.insert(2,"ROOM 2")
-        self.usersPanel.insert(3,"ROOM 3")
-        self.usersPanel.insert(4,"ROOM 4")
+        self.usersPanel.insert(1,"User 1")
         self.usersPanel.pack(expand=True, fill=BOTH)
         self.usersPanel.select_set(0) #This only sets focus on the first item.
-        self.usersPanel.bind('<<ListboxSelect>>', self.on_room_select)
+        self.usersPanel.bind('<<ListboxSelect>>', self.on_user_select)
 
 
         # contains messages
@@ -508,20 +514,37 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             room = tokens[1]
             print('Leaving room ',room)
 
-    def on_room_select(self, evt):
+    def on_room_select(self, selection):
         # Note here that Tkinter passes an event object to onselect()
-        w = evt.widget
-        index = int(w.curselection()[0])
-        value = w.get(index).lower().replace(' ','')
-        print('You selected room : "%s"' % value)
+        print('You selected room : "%s"' % selection)
         
         #Switching room
         if(self.selectedRoom != ''):
 
             self.leave_room(self.selectedRoom)
-        self.select_room(value)
+        self.select_room(selection)
         
+    def on_user_select(self, evt):
+        # Note here that Tkinter passes an event object to onselect()
+        w = evt.widget
+        index = int(w.curselection()[0])
+        value = w.get(index).lower().replace(' ','')
+        print('You selected user : "%s"' % value)
+        
+        # quit chatbox user
+        # if(self.selectedUser != ''):
 
+        #     self.quit_user_chat(self.selectedUser)
+        # self.select_user(value)
+
+    def on_user_connected(self, user):
+        end = self.usersPanel.size()
+        self.usersPanel.insert(end, user)
+
+    def on_user_disconnected(self, user):
+        idx = self.usersPanel.get(0, tk.END).index(user)
+        self.usersPanel.delete(idx)
+        
     
     # closes change username window
     def close_username_window(self):
