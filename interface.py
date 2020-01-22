@@ -9,6 +9,7 @@ from sender import SenderBroker
 from receiver import ReceiverBroker
 from Crypto.PublicKey import RSA
 from encryption_decryption import rsa_encrypt, rsa_decrypt
+import pika
 
 saved_username = ["You"]
 
@@ -53,6 +54,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.master = master
         self.sender_broker = sender_broker
         self.receiver_broker = receiver_broker
+        self.username = '' #LDAP LOGIN RETURNS LATER
 
         # sets default bg for top level windows
         self.tl_bg = "#EEEEEE"
@@ -300,6 +302,77 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
                              activeforeground=self.tl_fg, command=lambda: self.close_error_window("simple_error"))
             cancel_button.pack(side=RIGHT, padx=5)
 
+# Interaction with Server
+    def create_queue(self):
+        self.channel.exchange_declare(exchange='users_exchange', exchange_type='direct')
+        result = self.channel.queue_declare(queue='', exclusive=True)
+        self.queue_name = result.method.queue
+
+    def connect_to_server(self, username):
+        #SenderBroker.connect(self, exchange='main_queue')
+        self.connection = pika.BlockingConnection(
+        pika.ConnectionParameters(host='localhost'))
+        self.channel = self.connection.channel()
+        self.create_queue()
+        self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        self.send_request_to_server(self.channel,"login::"+self.queue_name[4:]+"::"+username)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+        
+
+    def send_request_to_server(self, channel, message):
+        self.channel.basic_publish(
+        exchange='',
+        routing_key='main_queue',
+        body=message,
+        properties=pika.BasicProperties(
+            delivery_mode=2,  # make message persistent
+        ))
+        print('Client send request with queue '+str(self.queue_name),message)
+        
+    def get_connected_users(self):
+        self.send_request_to_server(self.channel,"getConnectedUsers::"+self.queue_name[4:]+"::")
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+        
+    def get_user_data(self, dest_username):
+        self.send_request_to_server(self.channel,"getUserData::"+self.queue_name[4:]+"::"+dest_username)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+
+    def get_rooms(self):
+        self.send_request_to_server(self.channel,"getRooms::"+self.queue_name[4:]+"::")
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+    
+    def select_room(self, room):
+        self.send_request_to_server(self.channel,"joinRoom::"+self.queue_name[4:]+"::"+room)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+        
+    def send_msg_to_room(self, room, message):
+        self.send_request_to_server(self.channel,"sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+        
+    def leave_room(self, room):
+        self.send_request_to_server(self.channel,"leaveRoom::"+self.queue_name[4:]+"::"+room)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming() 
+        
+    def disconnect_from_server(self):
+        self.send_request_to_server(self.channel,"quit::"+self.queue_name[4:]+"::"+self.username)
+        self.channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        self.channel.start_consuming()
+
 # Send Message
 
     # allows user to hit enter instead of button to change username
@@ -370,14 +443,14 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         print(currentRoom)
         
         # get current room public key
-        currentRoomPublicKey = self.get_rsa_key("./chatrooms-keys/"+currentRoom).publickey().export_key()
+        #currentRoomPublicKey = self.get_rsa_key("./chatrooms-keys/"+currentRoom).publickey().export_key()
         #print (currentRoomPublicKey)
         
         # now, we'll encrypt the message before sending it to rabbitmq
-        user_input = rsa_encrypt(user_input, currentRoomPublicKey)
+        #user_input = rsa_encrypt(user_input, currentRoomPublicKey)
 
         username = saved_username[-1] + ": "
-        message = (username, user_input.decode())
+        message = (username, user_input)
         readable_msg = ''.join(message)
         readable_msg.strip('{')
         readable_msg.strip('}')
@@ -911,4 +984,3 @@ root.title("Talky Walky")
 root.geometry(default_window_size)
 print(default_window_size)
 root.minsize(360,200)
-

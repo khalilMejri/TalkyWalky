@@ -20,6 +20,9 @@ sender.connect(exchange="room 1")
 listener.connect(exchange="room 1")
 
 app = ChatInterface(root, sender_broker=sender, receiver_broker=listener)
+app.connect_to_server("JOE")
+app.get_rooms()
+app.get_connected_users()
 app.default_format()
 
 listener.async_consumer(app.on_message_recieved)
