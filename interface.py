@@ -255,6 +255,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             message = entry_field.get()
             # Encrypt msg with dest user pubkey
             encrypted_msg = rsa_encrypt(message, dest_user_pubkey)
+            print("Encrypted msg: \n" + encrypted_msg.decode())
             sender.send_message("messageSent::"+self.queue_name+"::"+encrypted_msg.decode())
             text_box.configure(state=NORMAL)
             text_box.insert(END, str(time.strftime('%I:%M:%S ')) +'Me: '+ message+'\n')
@@ -602,7 +603,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         elif action =='messageSent':
             user_queue = tokens[1]
             message = tokens[2].encode()
+            print("GOT THIS ENCRYPTED MSG: \n" + message.decode())
             decrypted_msg = rsa_decrypt(message, self.private_key)
+            print("AFTER DECRYPTION: \n" + decrypted_msg.decode())
             if(user_queue in self.talking_users):
                 self.received_user_message("Him: "+decrypted_msg.decode(),self.talking_users[user_queue]['textbox'])
             
