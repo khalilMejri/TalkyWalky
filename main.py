@@ -14,15 +14,15 @@ def on_closing():
 
 
 # start application
-sender = SenderBroker()
-listener = ReceiverBroker()
+#sender = SenderBroker()
+#listener = ReceiverBroker()
 
 #sender.connect(exchange="room 1")
 #listener.connect(exchange="room 1")
 
 app = ChatInterface(root)
 # connect
-app.connect_to_server('JOE')
+#app.connect_to_server('JOE')
 
 # do what u want
 
@@ -30,11 +30,11 @@ app.connect_to_server('JOE')
 #app.send_msg_to_room('room1', 'hello man!')
 
 # start consuming
-app.async_consumer()
+#app.async_consumer()
 
 app.default_format()
 
-listener.async_consumer(app.on_message_recieved)
+#listener.async_consumer(app.on_message_recieved)
 
 root.protocol('WM_DELETE_WINDOW', on_closing)  # root is your root window
 
