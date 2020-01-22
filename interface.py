@@ -5,10 +5,11 @@ import os
 import string
 import tkinter as tk
 import webbrowser
+from threading import Thread
 from sender import SenderBroker
 from receiver import ReceiverBroker
-from Crypto.PublicKey import RSA
-from encryption_decryption import rsa_encrypt, rsa_decrypt
+# from Crypto.PublicKey import RSA
+# from encryption_decryption import rsa_encrypt, rsa_decrypt
 import pika
 
 saved_username = ["You"]
@@ -372,6 +373,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
         self.channel.start_consuming()
+
+    def async_consumer(self, handler, params=None):
+        worker = Thread(target=handler, kwargs=params)
+        worker.start()
 
 # Send Message
 
