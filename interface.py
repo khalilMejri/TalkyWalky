@@ -511,7 +511,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # Note here that Tkinter passes an event object to onselect()
         w = evt.widget
         index = int(w.curselection()[0])
-        value = w.get(index)
+        value = w.get(index).lower().replace(' ','')
         print('You selected room : "%s"' % value)
         
         #Switching room
