@@ -10,8 +10,8 @@ import random
 from threading import Thread
 from sender import SenderBroker
 from receiver import ReceiverBroker
-# from Crypto.PublicKey import RSA
-# from encryption_decryption import rsa_encrypt, rsa_decrypt
+from Crypto.PublicKey import RSA
+from encryption_decryption import rsa_encrypt, rsa_decrypt, get_rsa_key
 import pika
 
 saved_username = ["You"]
@@ -379,6 +379,14 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         result = self.channel.queue_declare(queue='', exclusive=True)
         self.queue_name = result.method.queue
 
+    def generate_rsa_key_pair(self):
+        #Generating RSA key pair
+        key = RSA.generate(2048)
+        #Extracting private_key
+        self.private_key = key.export_key('PEM')
+        #Extracting public_key
+        self.public_key = key.publickey().exportKey('PEM')
+    
     def connect_to_server(self, username):
         #SenderBroker.connect(self, exchange='main_queue')
         self.username = username
@@ -386,8 +394,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         pika.ConnectionParameters(host='localhost'))
         self.channel = self.connection.channel()
         self.create_queue()
+        self.generate_rsa_key_pair()
         self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
-        self.send_request_to_server("login::"+self.queue_name[4:]+"::"+self.username)
+        self.send_request_to_server("login::"+self.queue_name[4:]+"::"+self.username+"::"+self.public_key.decode())
         self.async_consumer()
 
     def send_request_to_server(self, message):
@@ -409,7 +418,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.send_request_to_server("joinRoom::"+self.queue_name[4:]+"::"+room)
         
     def send_msg_to_room(self, room, message):
-        self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
+        # get room public key
+        joinedRoomPublicKey = get_rsa_key("./chatrooms-keys/"+room).publickey().export_key()
+        #print (joinedRoomPublicKey)
+        
+        # now, we'll encrypt the message before sending it to server with room pub key
+        encrypted_msg = rsa_encrypt(message, joinedRoomPublicKey)
+        self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+encrypted_msg.decode())
         
     
 
@@ -481,14 +496,6 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
     def send_message_event(self, event):
         user_name = saved_username[-1]
         self.send_message(user_name)
-
-    # get rsa key from file
-    def get_rsa_key(self, filepath):
-        with open(filepath, mode='rb') as private_file:
-            priv_key_data = private_file.read()
-            private_key = RSA.importKey(priv_key_data)
-            #print(private_key.export_key())
-            return private_key
     
     # joins username with message into publishable format
     def send_message(self, username):
@@ -602,9 +609,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         elif action =='roomReceive':
             room = tokens[1]
             username = tokens[2]
-            message = tokens[3]
-            print('Received msg at room, ',room,username,message)
-            self.send_message_insert("[%s] %s : %s"%(room,username,message))
+            # encode message then decrypt it with user private key
+            message = tokens[3].encode()
+            decrypted_msg = rsa_decrypt(message, self.private_key)
+            print("This is PrivateKey of " + self.username + " : " + self.private_key.decode())
+            print("This is PubKey of " + self.username + " : " + self.public_key.decode())
+            print('Received msg at room, ',room,username,decrypted_msg.decode())
+            self.send_message_insert("[%s] %s : %s"%(room,username,decrypted_msg.decode()))
         elif action =='left':
             room = tokens[1]
             print('Leaving room ',room)
