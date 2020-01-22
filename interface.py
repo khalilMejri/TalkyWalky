@@ -320,6 +320,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.channel = self.connection.channel()
         self.create_queue()
         self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        self.send_request_to_server("login::"+self.queue_name[4:]+"::"+self.username)
         self.async_consumer()
 
     def send_request_to_server(self, message):
@@ -500,7 +501,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             demanded_user_queue = tokens[2]
             print('Demanded user: ',username,demanded_user_queue)
         elif action == 'rooms':
-            rooms == tokens[1].split(',')
+            rooms = tokens[1].split(',')
             print('Received rooms ',rooms)
         elif action =='joinedRoom':
             joinedRoom = tokens[1]
