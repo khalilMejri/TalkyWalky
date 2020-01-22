@@ -5,6 +5,7 @@ import datetime
 from OpenSSL.crypto import verify # verifying function doesn't exist in cryptography module
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography import x509
 from cryptography.x509.oid import NameOID
@@ -37,6 +38,7 @@ def generate_or_load():
             key_size=3072,
             backend=default_backend()
         )   # Save it to disk
+        
         with open(CA_KEY_PATH, "wb") as f:
             f.write(key.private_bytes(
                 encoding=serialization.Encoding.PEM,
@@ -119,12 +121,13 @@ def handle_req(reqData,cert):
         
     cert_client = cert_client.sign(key, hashes.SHA256(), default_backend())  
     return    cert_client.public_bytes(serialization.Encoding.PEM).decode()
-def handle_cert():
-    if(path.exists('client_cert.pem') and path.isfile('client_cert.pem')):
-        pass
+def handle_cert(data):
+    if data:
+        cert = x509.load_pem_x509_certificate(data,default_backend())
+        print(cert.issuer,cert.version,cert.subject)
+        return cert
     else:
-        print('No certification exists for client')
-    pass
+        print('There is no certification')
 
 # First step is created a ROOT certificate (self signed certificate for the authority)
 #generate_or_load()
@@ -138,19 +141,19 @@ class CaServer:
     
     def generate_authority_key(self):
         self.ca_key,self.ca_cert = generate_or_load()
-        
+        self.ca_pubkey= self.ca_key.public_key()
     def connect(self):
         self.generate_authority_key()
         self.connection = pika.BlockingConnection(
         pika.ConnectionParameters(host='localhost'))
         self.channel = self.connection.channel()
         self.receive()
-    def send(self,client_queue,reqData):
+    def send(self,client_queue,action,data):
 
         self.channel.exchange_declare(exchange='cert_exchange', exchange_type='direct')
         self.channel.queue_declare(queue=client_queue, durable=True)
 
-        message = handle_req(reqData,self.ca_cert)
+        message = action+'::'+data
         self.channel.basic_publish(
             exchange='cert_exchange',
             routing_key=client_queue,
@@ -165,14 +168,30 @@ class CaServer:
 
         def callback(ch, method, properties, body):
             print(body)
-            client_queue, cert_req = body.decode().split(':')
-            cert_req = cert_req.encode()
-            print('Server Dealing with '+str(client_queue))
-            self.send(client_queue,cert_req)
+            client_queue, action,data = body.decode().split('::')
+            if (action=='request'):
+                
+                print('Server get cert request from  '+str(client_queue))
+                data = data.encode()
+                certdata = handle_req(data,self.ca_cert)
+                self.send(client_queue,'certif',certdata)
+            if(action=='verify'):
+                print('Server get verifying from '+str(client_queue))
+                certif = handle_cert(data.encode())
+                try:
+                    result = self.ca_pubkey.verify(
+                    certif.signature,
+                    certif.tbs_certificate_bytes,
+                    # Depends on the algorithm used to create the certificate
+                    padding.PKCS1v15(),
+                    certif.signature_hash_algorithm,)
+                    result = "Ok"
+                except cryptography.exceptions.InvalidSignature :
+                    result = "Not Verified"
+                
+                self.send(client_queue,'verify',result)
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            
 
-        
         self.channel.basic_consume(queue='cert_req_queue', on_message_callback=callback)
         print('Server Started !! Listening')
         self.channel.start_consuming()

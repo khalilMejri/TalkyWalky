@@ -24,7 +24,7 @@ def callback(ch, method, properties, body):
     
 
 # declaring the server queue
-channel.queue_declare(queue='main_queue', durable=True)
+#channel.queue_declare(queue='main_queue', durable=True)
 
 # declaring the exchange and my queue as client
 channel.exchange_declare(exchange='users_exchange', exchange_type='direct')
