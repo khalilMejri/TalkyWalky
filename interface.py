@@ -59,6 +59,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.selectedUser=''
         self.talking_users = {}
         self.tabs=[]
+        self.theme_function=self.color_theme_hacker
         self.username = ''.join(random.sample(string.ascii_lowercase,10)) #LDAP LOGIN RETURNS LATER
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
         self.connect_to_server(self.username)
@@ -105,15 +106,18 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         font.add_command(label="Fixedsys", command=self.font_change_fixedsys)
 
         # color theme
+        def theme_change(theme_function):
+            self.theme_function = theme_function
+            theme_function()
         color_theme = Menu(options, tearoff=0)
         options.add_cascade(label="Color Theme", menu=color_theme)
-        color_theme.add_command(label="Default", command=self.color_theme_default)
-        color_theme.add_command(label="Night", command=self.color_theme_dark)
-        color_theme.add_command(label="Grey", command=self.color_theme_grey)
-        color_theme.add_command(label="Blue", command=self.color_theme_dark_blue)
-        color_theme.add_command(label="Pink", command=self.color_theme_pink)
-        color_theme.add_command(label="Turquoise", command=self.color_theme_turquoise)
-        color_theme.add_command(label="Hacker", command=self.color_theme_hacker)
+        color_theme.add_command(label="Default", command=lambda:theme_change(self.color_theme_default))
+        color_theme.add_command(label="Night", command=lambda:theme_change(self.color_theme_dark))
+        color_theme.add_command(label="Grey", command=lambda:theme_change(self.color_theme_grey))
+        color_theme.add_command(label="Blue", command=lambda:theme_change(self.color_theme_dark_blue))
+        color_theme.add_command(label="Pink", command=lambda:theme_change(self.color_theme_pink))
+        color_theme.add_command(label="Turquoise", command=lambda:theme_change(self.color_theme_turquoise))
+        color_theme.add_command(label="Hacker", command=lambda:theme_change(self.color_theme_hacker))
 
         # all to default
         options.add_command(label="Default layout", command=self.default_format)
@@ -246,7 +250,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # frame containing send button and emoji button
         def sending_message():
             sender = SenderBroker(userqueue)
-            sender.send_message("messageSent::"+self.queue_name+"::"+entry_field.get())
+            message = entry_field.get()
+            sender.send_message("messageSent::"+self.queue_name+"::"+message)
+            text_box.configure(state=NORMAL)
+            text_box.insert(END, str(time.strftime('%I:%M:%S ')) +'Me: '+ message+'\n')
+            self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
+            text_box.see(END)
+            text_box.configure(state=DISABLED)
         # send button
         send_button = Button(entry_frame, text="Send", width=5, relief=GROOVE, bg='white',
                                   bd=1, command=lambda: sending_message(), activebackground="#FFFFFF",
@@ -255,6 +265,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         newTab.bind("<Return>", sending_message)
         
         self.notebook.add(newTab,text=username)
+        self.tabs.append(newTab)
+        self.theme_function()
         return newTab,text_box
 # File functions
     def client_exit(self):
@@ -512,7 +524,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
     def received_user_message(self,message,textbox):
         textbox.configure(state=NORMAL)
         textbox.insert(END, str(time.strftime('%I:%M:%S ')) + message+'\n')
-        self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
+        self.last_sent_label(str(time.strftime( "Last message received: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
         textbox.see(END)
         textbox.configure(state=DISABLED)
     # inserts user input into text box
@@ -549,6 +561,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             pass
         elif action =='connectedUsers':
             users_names = tokens[1].split(',')
+            if self.username in users_names:
+                users_names.remove(self.username)
             print('Connected users: ',users_names)
             self.usersPanel.delete(0, END)
             for i,name in enumerate(users_names):
@@ -560,7 +574,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             # adding the wanted user to talking users
             tab,textbox = self.generate_tab(username,demanded_user_queue)
             self.talking_users.setdefault(demanded_user_queue,{'username':username,'textbox':textbox})
-            self.tabs.append(tab)
+            
             
             print('Demanded user: ',username,demanded_user_queue)
         elif action =='choosed':
@@ -568,18 +582,16 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             calling_user_queue = tokens[2]
             # adding who want to talk to me in talking users
             tab,textbox = self.generate_tab(calling_username,calling_user_queue)
-            self.talking_users.setdefault(demanded_user_queue,{'username':calling_username,'textbox':textbox})
-            self.tabs.append(tab)
-            
-          
+            self.talking_users.setdefault(calling_user_queue,{'username':calling_username,'textbox':textbox})
+
             print('Have been demanded from ', calling_username,calling_user_queue)
         elif action =='messageSent':
             user_queue = tokens[1]
             message = tokens[2]
             if(user_queue in self.talking_users):
-                self.received_user_message(message,self.talking_users[user_queue]['textbox'])
+                self.received_user_message("Him: "+message,self.talking_users[user_queue]['textbox'])
             
-            print('Received message from ',username,message)
+            print('Received message from ',self.talking_users[user_queue]['username'] ,message)
         elif action == 'rooms':
             rooms = tokens[1].split(',')
             print('Received rooms ',rooms)

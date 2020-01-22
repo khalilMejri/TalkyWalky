@@ -33,6 +33,9 @@ class Server:
             user_name= tokens[1]
             self.connected_users.setdefault(queue_name,user_name)
             self.send(queue_name,"connected::")
+            for queue in self.connected_users.keys():
+                if queue != queue_name:
+                    self.send(queue,"connectedUsers::"+','.join(self.connected_users.values()))
 
         elif action == 'quit':
             # User send his queue name
@@ -40,6 +43,9 @@ class Server:
             if queue_name in self.connected_users.keys():
                 del self.connected_users[queue_name]
                 self.send(queue_name,"disconnected::")
+                for queue in self.connected_users.keys():
+                    if queue != queue_name:
+                        self.send(queue,"connectedUsers::"+','.join(self.connected_users.values()))
                 return True
             else:
                 self.send(queue_name,"invalid::")
@@ -62,7 +68,7 @@ class Server:
             for key,val in self.connected_users.items():
                 if val == demanded_user_name:
                     self.send(key,"choosed::"+self.connected_users[queue_name]+'::'+queue_name)
-                    self.send(queue_name,"username::"+str(val)+"userQueue::"+str(key))
+                    self.send(queue_name,"username::"+str(val)+"::"+str(key))
                     return True
             self.send(queue_name,"notfound::")
             return False
