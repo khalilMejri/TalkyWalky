@@ -56,6 +56,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.sender_broker = sender_broker
         self.receiver_broker = receiver_broker
         self.username = '' #LDAP LOGIN RETURNS LATER
+        #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host='localhost'))
 
         # sets default bg for top level windows
         self.tl_bg = "#EEEEEE"
@@ -320,7 +323,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         
 
     def send_request_to_server(self, channel, message):
-        self.channel.basic_publish(
+        channel.basic_publish(
         exchange='',
         routing_key='main_queue',
         body=message,
