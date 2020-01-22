@@ -1,15 +1,17 @@
 from tkinter import *
+from tkinter import ttk
 import time
 import re
 import os
 import string
 import tkinter as tk
 import webbrowser
+import random
 from threading import Thread
 from sender import SenderBroker
 from receiver import ReceiverBroker
-# from Crypto.PublicKey import RSA
-# from encryption_decryption import rsa_encrypt, rsa_decrypt
+from Crypto.PublicKey import RSA
+from encryption_decryption import rsa_encrypt, rsa_decrypt, get_rsa_key
 import pika
 
 saved_username = ["You"]
@@ -56,11 +58,12 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.selectedRoom=''
         self.selectedUser=''
         self.talking_users = {}
-        self.username = 'USERNAME' #LDAP LOGIN RETURNS LATER
+        self.tabs=[]
+        self.theme_function=self.color_theme_hacker
+        self.username = ''.join(random.sample(string.ascii_lowercase,10)) #LDAP LOGIN RETURNS LATER
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
         self.connect_to_server(self.username)
-        self.get_rooms()
-        self.get_connected_users()
+
         # sets default bg for top level windows
         self.tl_bg = "#EEEEEE"
         self.tl_bg2 = "#EEEEEE"
@@ -103,15 +106,18 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         font.add_command(label="Fixedsys", command=self.font_change_fixedsys)
 
         # color theme
+        def theme_change(theme_function):
+            self.theme_function = theme_function
+            theme_function()
         color_theme = Menu(options, tearoff=0)
         options.add_cascade(label="Color Theme", menu=color_theme)
-        color_theme.add_command(label="Default", command=self.color_theme_default)
-        color_theme.add_command(label="Night", command=self.color_theme_dark)
-        color_theme.add_command(label="Grey", command=self.color_theme_grey)
-        color_theme.add_command(label="Blue", command=self.color_theme_dark_blue)
-        color_theme.add_command(label="Pink", command=self.color_theme_pink)
-        color_theme.add_command(label="Turquoise", command=self.color_theme_turquoise)
-        color_theme.add_command(label="Hacker", command=self.color_theme_hacker)
+        color_theme.add_command(label="Default", command=lambda:theme_change(self.color_theme_default))
+        color_theme.add_command(label="Night", command=lambda:theme_change(self.color_theme_dark))
+        color_theme.add_command(label="Grey", command=lambda:theme_change(self.color_theme_grey))
+        color_theme.add_command(label="Blue", command=lambda:theme_change(self.color_theme_dark_blue))
+        color_theme.add_command(label="Pink", command=lambda:theme_change(self.color_theme_pink))
+        color_theme.add_command(label="Turquoise", command=lambda:theme_change(self.color_theme_turquoise))
+        color_theme.add_command(label="Hacker", command=lambda:theme_change(self.color_theme_hacker))
 
         # all to default
         options.add_command(label="Default layout", command=self.default_format)
@@ -128,10 +134,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
      # Rooms
         help_option = Menu(menu, tearoff=0)
         menu.add_cascade(label="Rooms", menu=help_option)
-        help_option.add_command(label="room 1", command=lambda : self.on_room_select("room 1"))
-        help_option.add_command(label="room 2", command=lambda : self.on_room_select("room 2"))
-        help_option.add_command(label="room 3", command=lambda : self.on_room_select("room 3"))
-
+        help_option.add_command(label="room 1", command=lambda : self.on_room_select("room1"))
+        help_option.add_command(label="room 2", command=lambda : self.on_room_select("room2"))
+        help_option.add_command(label="room 3", command=lambda : self.on_room_select("room3"))
+        help_option.add_command(label="room 3", command=lambda : self.on_room_select("room4"))
 
     # Help
         help_option = Menu(menu, tearoff=0)
@@ -141,18 +147,24 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
     # Chat interface
         # frame containing text box with messages and scrollbar
-        self.container = Frame(self.master, bd=0)
-        self.container.pack(expand=True, fill=BOTH)
 
-        self.text_frame = Frame(self.container, bd=0)
+        self.notebook = ttk.Notebook(self.master)
+        self.container = Frame(self.notebook, bd=0)
+        self.container.pack(expand=True, fill=BOTH)
+        
+        self.notebook.pack(expand=True, fill=BOTH)
+        self.upperFrame = Frame(self.container)
+        self.upperFrame.pack(expand=True, fill=BOTH, side=TOP)
+
+        self.text_frame = Frame(self.upperFrame, bd=0)
         self.text_frame.pack(expand=True, fill=BOTH, side=LEFT)
         
         # scrollbar for text box
         self.text_box_scrollbar = Scrollbar(self.text_frame, bd=0)
         self.text_box_scrollbar.pack(fill=Y, side=RIGHT)
         
-        self.users_frame = Frame(self.container, bd=0)
-        self.users_frame.pack(fill=BOTH, side=RIGHT)
+        self.users_frame = Frame(self.upperFrame, bd=0)
+        self.users_frame.pack(fill=BOTH, side=LEFT)
         
         self.usersPanel= Listbox(self.users_frame, selectmode=SINGLE)
         self.usersPanel.insert(1,"User 1")
@@ -169,17 +181,17 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.text_box_scrollbar.config(command=self.text_box.yview)
 
         # frame containing user entry field
-        self.entry_frame = Frame(self.master, bd=1)
-        self.entry_frame.pack(side=LEFT, fill=BOTH, expand=True)
+        self.entry_frame = Frame(self.container, bd=0)
+        self.entry_frame.pack(side=BOTTOM, fill=X, expand=False)
 
         # entry field
-        self.entry_field = Entry(self.entry_frame, bd=1, justify=LEFT)
+        self.entry_field = Entry(self.entry_frame, bd=0, justify=LEFT)
         self.entry_field.pack(fill=X, padx=6, pady=6, ipady=3)
         self.entry_field.focus()
         # self.users_message = self.entry_field.get()
 
         # frame containing send button and emoji button
-        self.send_button_frame = Frame(self.master, bd=0)
+        self.send_button_frame = Frame(self.entry_frame, bd=0)
         self.send_button_frame.pack(fill=BOTH)
 
         # send button
@@ -196,7 +208,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.emoji_button.pack(side=RIGHT, padx=6, pady=6, ipady=2)
 
         self.last_sent_label(date="No messages sent.")
+        self.notebook.add(self.container,text="Main Tab [Rooms]")
+        
+        
 
+        self.get_rooms()
+        self.get_connected_users()
+  
     def last_sent_label(self, date):
 
         try:
@@ -206,7 +224,55 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
         self.sent_label = Label(self.entry_frame, font="Verdana 7", text=date, bg=self.tl_bg2, fg=self.tl_fg)
         self.sent_label.pack(side=LEFT, fill=X, padx=3)
+# Interface Function 
+    def generate_tab(self,username="Pardefaut",userqueue=None):
+        newTab = Frame(self.notebook,bd=0)
+        text_frame = Frame(newTab, bd=0)
+        text_frame.pack(expand=True, fill=BOTH, side=TOP)
+        text_box_scrollbar = Scrollbar(text_frame, bd=0)
+        text_box_scrollbar.pack(fill=Y, side=RIGHT)
+        text_box = Text(text_frame, yscrollcommand=text_box_scrollbar.set, state=DISABLED,
+                             bd=1, padx=6, pady=6, spacing3=8, wrap=WORD, bg=None, font="Verdana 10", relief=GROOVE,
+                             width=10, height=1)
+        text_box.pack(expand=True, fill=BOTH)
+        text_box_scrollbar.config(command=text_box.yview)
 
+        # frame containing user entry field
+        entry_frame = Frame(newTab, bd=1)
+        entry_frame.pack(side=BOTTOM, fill=BOTH, expand=False)
+
+        # entry field
+        entry_field = Entry(entry_frame, bd=1, justify=LEFT)
+        entry_field.pack(fill=X, padx=6, pady=6, ipady=3)
+        entry_field.focus()
+        # users_message = entry_field.get()
+
+        # frame containing send button and emoji button
+        def sending_message():
+            sender = SenderBroker(userqueue)
+            # Get destination user pubkey
+            dest_user_pubkey = self.talking_users[userqueue]['pubkey']
+            message = entry_field.get()
+            # Encrypt msg with dest user pubkey
+            encrypted_msg = rsa_encrypt(message, dest_user_pubkey)
+            print("Encrypted msg: \n" + encrypted_msg.decode())
+            sender.send_message("messageSent::"+self.queue_name+"::"+encrypted_msg.decode())
+            text_box.configure(state=NORMAL)
+            text_box.insert(END, str(time.strftime('%I:%M:%S ')) +'Me: '+ message+'\n')
+            self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
+            text_box.see(END)
+            text_box.configure(state=DISABLED)
+        # send button
+        send_button = Button(entry_frame, text="Send", width=5, relief=GROOVE, bg='white',
+                                  bd=1, command=lambda: sending_message(), activebackground="#FFFFFF",
+                                  activeforeground="#000000")
+        send_button.pack(side=LEFT, ipady=2)
+        newTab.bind("<Return>", sending_message)
+        
+        self.notebook.add(newTab,text=username)
+        self.tabs.append(newTab)
+        self.theme_function()
+        return newTab,text_box
 # File functions
     def client_exit(self):
         exit()
@@ -318,6 +384,14 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         result = self.channel.queue_declare(queue='', exclusive=True)
         self.queue_name = result.method.queue
 
+    def generate_rsa_key_pair(self):
+        #Generating RSA key pair
+        key = RSA.generate(2048)
+        #Extracting private_key
+        self.private_key = key.export_key('PEM')
+        #Extracting public_key
+        self.public_key = key.publickey().exportKey('PEM')
+    
     def connect_to_server(self, username):
         #SenderBroker.connect(self, exchange='main_queue')
         self.username = username
@@ -325,8 +399,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         pika.ConnectionParameters(host='localhost'))
         self.channel = self.connection.channel()
         self.create_queue()
+        self.generate_rsa_key_pair()
         self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
-        self.send_request_to_server("login::"+self.queue_name[4:]+"::"+self.username)
+        self.send_request_to_server("login::"+self.queue_name[4:]+"::"+self.username+"::"+self.public_key.decode())
         self.async_consumer()
 
     def send_request_to_server(self, message):
@@ -348,8 +423,16 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.send_request_to_server("joinRoom::"+self.queue_name[4:]+"::"+room)
         
     def send_msg_to_room(self, room, message):
-        self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
+        # get room public key
+        joinedRoomPublicKey = get_rsa_key("./chatrooms-keys/"+room).publickey().export_key()
+        #print (joinedRoomPublicKey)
         
+        # now, we'll encrypt the message before sending it to server with room pub key
+        encrypted_msg = rsa_encrypt(message, joinedRoomPublicKey)
+        self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+encrypted_msg.decode())
+        
+    
+
     def leave_room(self, room):
         self.send_request_to_server("leaveRoom::"+self.queue_name[4:]+"::"+room)
         
@@ -418,14 +501,6 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
     def send_message_event(self, event):
         user_name = saved_username[-1]
         self.send_message(user_name)
-
-    # get rsa key from file
-    def get_rsa_key(self, filepath):
-        with open(filepath, mode='rb') as private_file:
-            priv_key_data = private_file.read()
-            private_key = RSA.importKey(priv_key_data)
-            #print(private_key.export_key())
-            return private_key
     
     # joins username with message into publishable format
     def send_message(self, username):
@@ -457,6 +532,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             self.send_msg_to_room(self.selectedRoom,message)
 
 
+
+    def received_user_message(self,message,textbox):
+        textbox.configure(state=NORMAL)
+        textbox.insert(END, str(time.strftime('%I:%M:%S ')) + message+'\n')
+        self.last_sent_label(str(time.strftime( "Last message received: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
+        textbox.see(END)
+        textbox.configure(state=DISABLED)
     # inserts user input into text box
     def send_message_insert(self, message):
         # tries to close emoji window if its open. If not, passes
@@ -491,16 +573,43 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             pass
         elif action =='connectedUsers':
             users_names = tokens[1].split(',')
+            if self.username in users_names:
+                users_names.remove(self.username)
             print('Connected users: ',users_names)
+            self.usersPanel.delete(0, END)
+            for i,name in enumerate(users_names):
+                self.usersPanel.insert(i,name)
             # TODO show the users
+        # The action for user who sent the demand to chat with another user: we get him username, queue and pubkey of dest
         elif action =='username':
-            username = tokens[1]
+            demanded_username = tokens[1]
             demanded_user_queue = tokens[2]
-            print('Demanded user: ',username,demanded_user_queue)
-        elif action =='choosed':
+            demanded_user_pubkey = tokens[3].encode()
+            # adding the wanted user to talking users
+            tab,textbox = self.generate_tab(demanded_username,demanded_user_queue)
+            self.talking_users.setdefault(demanded_user_queue,{'username':demanded_username,'pubkey':demanded_user_pubkey,'textbox':textbox})
+            
+            print('Demanded user: ',demanded_username,demanded_user_queue)
+        # The action for a chosen user : we get him the sender's name, pubkey and queue  
+        elif action =='chosen':
             calling_username = tokens[1]
-            calling_user_queue = tokens[2]
+            calling_user_pubkey = tokens[2].encode()
+            calling_user_queue = tokens[3]
+            # adding who want to talk to me in talking users
+            tab,textbox = self.generate_tab(calling_username,calling_user_queue)
+            self.talking_users.setdefault(calling_user_queue,{'username':calling_username,'pubkey':calling_user_pubkey,'textbox':textbox})
+
             print('Have been demanded from ', calling_username,calling_user_queue)
+        elif action =='messageSent':
+            user_queue = tokens[1]
+            message = tokens[2].encode()
+            print("GOT THIS ENCRYPTED MSG: \n" + message.decode())
+            decrypted_msg = rsa_decrypt(message, self.private_key)
+            print("AFTER DECRYPTION: \n" + decrypted_msg.decode())
+            if(user_queue in self.talking_users):
+                self.received_user_message("Him: "+decrypted_msg.decode(),self.talking_users[user_queue]['textbox'])
+            
+            print('Received message from ',self.talking_users[user_queue]['username'] ,decrypted_msg.decode())
         elif action == 'rooms':
             rooms = tokens[1].split(',')
             print('Received rooms ',rooms)
@@ -511,9 +620,13 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         elif action =='roomReceive':
             room = tokens[1]
             username = tokens[2]
-            message = tokens[3]
-            print('Received msg at room, ',room,username,message)
-            self.send_message_insert("[%s] %s : %s"%(room,username,message))
+            # encode message then decrypt it with user private key
+            message = tokens[3].encode()
+            decrypted_msg = rsa_decrypt(message, self.private_key)
+            print("This is PrivateKey of " + self.username + " : " + self.private_key.decode())
+            print("This is PubKey of " + self.username + " : " + self.public_key.decode())
+            print('Received msg at room, ',room,username,decrypted_msg.decode())
+            self.send_message_insert("[%s] %s : %s"%(room,username,decrypted_msg.decode()))
         elif action =='left':
             room = tokens[1]
             print('Leaving room ',room)
@@ -532,9 +645,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # Note here that Tkinter passes an event object to onselect()
         w = evt.widget
         index = int(w.curselection()[0])
+        print (w.get(index))
         value = w.get(index).lower().replace(' ','')
         print('You selected user : "%s"' % value)
-        
+        self.get_user_data(value)
         # quit chatbox user
         # if(self.selectedUser != ''):
 
@@ -737,6 +851,24 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.font = "fixedsys"
 
 # Color theme options
+    def apply_theme_tab(self,tab,bg,bg2,fg):
+        tf_name,ef_name= tab.children.keys()
+        text_frame = tab.children[tf_name]
+        text_frame.config(bg=bg2)
+        tf_children = text_frame.children.values()
+        entry_frame = tab.children[ef_name]
+        entry_frame.config(bg=bg2)
+        ef_children = entry_frame.children.values()
+        for child in list(tf_children) + list(ef_children):
+            print(type(child))
+            if type(child) == tk.Entry:
+                child.config(bg=bg, fg=fg)
+            if type(child) == tk.Button:
+                child.config(bg=bg, fg=fg, activebackground=bg, activeforeground=fg)
+            if type(child) == tk.Text:
+                child.config(bg=bg, fg=fg)
+        
+
     # Default
     def color_theme_default(self):
         self.master.config(bg="#EEEEEE")
@@ -755,6 +887,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#FFFFFF"
         self.tl_bg2 = "#EEEEEE"
         self.tl_fg = "#000000"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Dark
     def color_theme_dark(self):
@@ -774,6 +908,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#212121"
         self.tl_bg2 = "#2a2b2d"
         self.tl_fg = "#FFFFFF"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Grey
     def color_theme_grey(self):
@@ -793,6 +929,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#4f4f4f"
         self.tl_bg2 = "#444444"
         self.tl_fg = "#ffffff"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Blue
     def color_theme_dark_blue(self):
@@ -812,6 +950,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#1c2e44"
         self.tl_bg2 = "#263b54"
         self.tl_fg = "#FFFFFF"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Pink
     def color_theme_pink(self):
@@ -831,6 +971,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#ffe8fa"
         self.tl_bg2 = "#ffc1f2"
         self.tl_fg = "#000000"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Turquoise
     def color_theme_turquoise(self):
@@ -849,6 +991,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#669999"
         self.tl_bg2 = "#003333"
         self.tl_fg = "#FFFFFF"
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
 
     # Hacker
     def color_theme_hacker(self):
@@ -867,7 +1011,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.tl_bg = "#0F0F0F"
         self.tl_bg2 = "#0F0F0F"
         self.tl_fg = "#33FF33"
-
+        for tab in self.tabs:
+            self.apply_theme_tab(tab,self.tl_bg,self.tl_bg2,self.tl_fg)
     # Default font and color theme
     def default_format(self):
         self.font_change_default()

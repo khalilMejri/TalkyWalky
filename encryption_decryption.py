@@ -64,3 +64,11 @@ def rsa_decrypt(encrypted_message, receiver_private_key):
 
 #FOR TESTING! SINCE WE DON'T HAVE RSA KEY PAIRS LOCALLY
 #rsa_encrypt_decrypt()
+
+# get rsa key from file
+def get_rsa_key(filepath):
+    with open(filepath, mode='rb') as private_file:
+        priv_key_data = private_file.read()
+        private_key = RSA.importKey(priv_key_data)
+        #print(private_key.export_key())
+        return private_key
