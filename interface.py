@@ -56,6 +56,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.sender_broker = sender_broker
         self.receiver_broker = receiver_broker
         self.username = '' #LDAP LOGIN RETURNS LATER
+        #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
+        self.connection = pika.BlockingConnection(
+            pika.ConnectionParameters(host='localhost'))
 
         # sets default bg for top level windows
         self.tl_bg = "#EEEEEE"
@@ -304,26 +307,25 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             cancel_button.pack(side=RIGHT, padx=5)
 
 # Interaction with Server
-    def create_queue(self):
-        self.channel.exchange_declare(exchange='users_exchange', exchange_type='direct')
-        result = self.channel.queue_declare(queue='', exclusive=True)
+    def create_queue(self, channel):
+        channel.exchange_declare(exchange='users_exchange', exchange_type='direct')
+        result = channel.queue_declare(queue='', exclusive=True)
         self.queue_name = result.method.queue
 
     def connect_to_server(self, username):
         #SenderBroker.connect(self, exchange='main_queue')
-        self.connection = pika.BlockingConnection(
-        pika.ConnectionParameters(host='localhost'))
-        self.channel = self.connection.channel()
-        self.create_queue()
-        self.channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
-        self.send_request_to_server(self.channel,"login::"+self.queue_name[4:]+"::"+username)
-        self.channel.basic_consume(
+
+        channel = self.connection.channel()
+        self.create_queue(channel)
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        self.send_request_to_server(channel,"login::"+self.queue_name[4:]+"::"+username)
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
         
 
     def send_request_to_server(self, channel, message):
-        self.channel.basic_publish(
+        channel.basic_publish(
         exchange='',
         routing_key='main_queue',
         body=message,
@@ -333,46 +335,64 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         print('Client send request with queue '+str(self.queue_name),message)
         
     def get_connected_users(self):
-        self.send_request_to_server(self.channel,"getConnectedUsers::"+self.queue_name[4:]+"::")
-        self.channel.basic_consume(
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        
+        self.send_request_to_server(channel,"getConnectedUsers::"+self.queue_name[4:]+"::")
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
         
     def get_user_data(self, dest_username):
-        self.send_request_to_server(self.channel,"getUserData::"+self.queue_name[4:]+"::"+dest_username)
-        self.channel.basic_consume(
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        
+        self.send_request_to_server(channel,"getUserData::"+self.queue_name[4:]+"::"+dest_username)
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
 
     def get_rooms(self):
-        self.send_request_to_server(self.channel,"getRooms::"+self.queue_name[4:]+"::")
-        self.channel.basic_consume(
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        
+        self.send_request_to_server(channel,"getRooms::"+self.queue_name[4:]+"::")
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
     
     def select_room(self, room):
-        self.send_request_to_server(self.channel,"joinRoom::"+self.queue_name[4:]+"::"+room)
-        self.channel.basic_consume(
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        
+        self.send_request_to_server(channel,"joinRoom::"+self.queue_name[4:]+"::"+room)
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
         
     def send_msg_to_room(self, room, message):
-        self.send_request_to_server(self.channel,"sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
-        self.channel.basic_consume(
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
+        
+        self.send_request_to_server(channel,"sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+message)
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming()
         
     def leave_room(self, room):
-        self.send_request_to_server(self.channel,"leaveRoom::"+self.queue_name[4:]+"::"+room)
-        self.channel.basic_consume(
-                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming() 
+        channel = self.connection.channel()
+        channel.queue_bind(exchange='users_exchange', queue=self.queue_name,routing_key=self.queue_name[4:])
         
-    def disconnect_from_server(self):
-        self.send_request_to_server(self.channel,"quit::"+self.queue_name[4:]+"::"+self.username)
-        self.channel.basic_consume(
+        self.send_request_to_server(channel,"leaveRoom::"+self.queue_name[4:]+"::"+room)
+        channel.basic_consume(
                     queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
-        self.channel.start_consuming()
+        channel.start_consuming() 
+        
+    def disconnect_from_server(self, channel):
+        self.send_request_to_server(channel,"quit::"+self.queue_name[4:]+"::"+self.username)
+        channel.basic_consume(
+                    queue=self.queue_name, on_message_callback=self.on_message_recieved, auto_ack=True)
+        channel.start_consuming()
 
     def async_consumer(self, handler, params=None):
         worker = Thread(target=handler, kwargs=params)
