@@ -30,5 +30,6 @@ class SenderBroker(Thread):
         self.run(msg)
 
 
-    def disconnect(self):
+    def stop(self):
+        self.join(5)
         self.connection.close()

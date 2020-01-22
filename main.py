@@ -9,9 +9,8 @@ def on_closing():
     # check if saving
     # if not:
     # listener.discard_channel()
-    app.disconnect_from_server()
     root.destroy()
-
+    app.disconnect_from_server()
 
 # start application
 #sender = SenderBroker()

@@ -20,7 +20,7 @@ class Server:
             tokens = body.decode().split('::')
             action = tokens[0]
             tokens[1] =  'amq.'+tokens[1]
-            print("received this ",body)
+            print("[+] Received this ",body)
             self.handleAction(action,tokens[1:])
             ch.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -102,7 +102,7 @@ class Server:
                     # Get pubkey for each user
                     destPubKey = self.connected_users[queue]['pubkey']
                     # Encrypt the message with user's public key
-                    print("This is the pubKey of " + self.connected_users[queue]['username'] + ": "+destPubKey.decode())
+                    print("This is the pubKey of " + self.connected_users[queue]['username'] + ": "+destPubKey.decode()[:40])
                     encrypted_msg = rsa_encrypt(message, destPubKey)
                     self.send(queue,'roomReceive::'+room+'::'+user_name+'::'+encrypted_msg.decode())
                 return True

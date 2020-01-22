@@ -19,13 +19,13 @@ saved_username = ["You"]
 # checks if username file exists, if not, makes one.
 if not os.path.isfile("usernames.txt"):
     # doesnt exist, creates usernames.txt file
-    print('"username.txt" file doesn\'t exist. Creating new file.')
+    # print('"username.txt" file doesn\'t exist. Creating new file.')
     with open ("usernames.txt", 'wb') as file:
         pass
 
 else:
     # file exists, takes all existing usernames stored in file and adds them to saved_username list
-    print('"username.txt" file found.')
+    # print('"username.txt" file found.')
     with open("usernames.txt", 'r') as file:
         for line in file:
             saved_username.append(line.replace("\n", ""))
@@ -35,7 +35,7 @@ else:
 # checks if default_win_size file exists, if not, makes one.
 if not os.path.isfile("default_win_size.txt"):
     # doesnt exist, creates default_win_size.txt file
-    print('"default_win_size.txt" file doesn\'t exist. Creating new file.')
+    # print('"default_win_size.txt" file doesn\'t exist. Creating new file.')
     with open("default_win_size.txt", 'wb') as file:
         pass
 
@@ -43,7 +43,7 @@ if not os.path.isfile("default_win_size.txt"):
 
 else:
     # file exists, takes existing window size and defines it
-    print('"default_win_size.txt" file found.')
+    #print('"default_win_size.txt" file found.')
     with open("default_win_size.txt", 'r') as file:
         size = file.readlines()
         default_window_size= ''.join(size)
@@ -199,7 +199,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
                                   bd=1, command=lambda: self.send_message(None), activebackground="#FFFFFF",
                                   activeforeground="#000000")
         self.send_button.pack(side=LEFT, ipady=2)
-        self.master.bind("<Return>", self.send_message_event)
+        self.container.bind("<Return>", self.send_message_event)
 
         # emoticons
         self.emoji_button = Button(self.send_button_frame, text="☺", width=2, relief=GROOVE, bg='white',
@@ -255,7 +255,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             message = entry_field.get()
             # Encrypt msg with dest user pubkey
             encrypted_msg = rsa_encrypt(message, dest_user_pubkey)
-            print("Encrypted msg: \n" + encrypted_msg.decode())
+            print("[!] Sending encrypted msg: \n" + encrypted_msg.decode()[:40])
             sender.send_message("messageSent::"+self.queue_name+"::"+encrypted_msg.decode())
             text_box.configure(state=NORMAL)
             text_box.insert(END, str(time.strftime('%I:%M:%S ')) +'Me: '+ message+'\n')
@@ -406,7 +406,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
     def send_request_to_server(self, message):
         sender = SenderBroker('main_queue')
-        print('Client send request with queue '+str(self.queue_name),message)
+        print('[+] Requesting with '+str(self.queue_name),message[:150])
         sender.send_message(message)
         
         
@@ -424,11 +424,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         
     def send_msg_to_room(self, room, message):
         # get room public key
-        joinedRoomPublicKey = get_rsa_key("./chatrooms-keys/"+room).publickey().export_key()
-        #print (joinedRoomPublicKey)
-        
+        joinedRoomPublicKey = get_rsa_key("./chatrooms-keys/"+room).publickey().export_key()        
         # now, we'll encrypt the message before sending it to server with room pub key
         encrypted_msg = rsa_encrypt(message, joinedRoomPublicKey)
+        print('[!] Sending to room %s key %s'%(self.selectedRoom,encrypted_msg[:50]))
         self.send_request_to_server("sendToRoom::"+self.queue_name[4:]+"::"+room+"::"+encrypted_msg.decode())
         
     
@@ -438,16 +437,17 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         
     def disconnect_from_server(self):
         self.send_request_to_server("quit::"+self.queue_name[4:]+"::"+self.username)
-
+        self.channel.stop_consuming()
+        self.connection.close()
     def listen_channel(self):
         self.channel.basic_consume(
             queue=self.queue_name, on_message_callback=self.on_message_recieved)
         self.channel.start_consuming()
-        print("shutdown broker!")
+        
 
     def async_consumer(self):
-        worker = Thread(target=self.listen_channel)
-        worker.start()
+        self.worker = Thread(target=self.listen_channel)
+        self.worker.start()
 
 # Send Message
 
@@ -508,12 +508,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         user_input = self.entry_field.get()
         currentRoom = self.usersPanel.get(ANCHOR)
         currentRoom = currentRoom.replace(" ", "")
-        print(currentRoom)
-        
-        # get current room public key
-        #currentRoomPublicKey = self.get_rsa_key("./chatrooms-keys/"+currentRoom).publickey().export_key()
-        #print (currentRoomPublicKey)
-        
+
         # now, we'll encrypt the message before sending it to rabbitmq
         #user_input = rsa_encrypt(user_input, currentRoomPublicKey)
 
@@ -566,16 +561,15 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         tokens = body.decode().split('::')
         action = tokens[0]
         if action =='connected':
-            print('Connected')
+            print('[+] Connected')
             # connected treatement
         elif action =='disconnected':
-            print('Disconnected')
-            pass
+            print('[+] Disconnected')
         elif action =='connectedUsers':
             users_names = tokens[1].split(',')
             if self.username in users_names:
                 users_names.remove(self.username)
-            print('Connected users: ',users_names)
+            print('[+] Connected users: ',users_names)
             self.usersPanel.delete(0, END)
             for i,name in enumerate(users_names):
                 self.usersPanel.insert(i,name)
@@ -589,7 +583,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             tab,textbox = self.generate_tab(demanded_username,demanded_user_queue)
             self.talking_users.setdefault(demanded_user_queue,{'username':demanded_username,'pubkey':demanded_user_pubkey,'textbox':textbox})
             
-            print('Demanded user: ',demanded_username,demanded_user_queue)
+            print('[+] Demanded user: ',demanded_username,demanded_user_queue)
         # The action for a chosen user : we get him the sender's name, pubkey and queue  
         elif action =='chosen':
             calling_username = tokens[1]
@@ -599,41 +593,39 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             tab,textbox = self.generate_tab(calling_username,calling_user_queue)
             self.talking_users.setdefault(calling_user_queue,{'username':calling_username,'pubkey':calling_user_pubkey,'textbox':textbox})
 
-            print('Have been demanded from ', calling_username,calling_user_queue)
+            print('[+] Have been demanded from ', calling_username,calling_user_queue)
         elif action =='messageSent':
             user_queue = tokens[1]
             message = tokens[2].encode()
-            print("GOT THIS ENCRYPTED MSG: \n" + message.decode())
+            print("[+] Got encrypred message : %s  1v1 from : %s"% (self.talking_users[user_queue]['username'] ,message.decode()[:50]))
             decrypted_msg = rsa_decrypt(message, self.private_key)
-            print("AFTER DECRYPTION: \n" + decrypted_msg.decode())
             if(user_queue in self.talking_users):
                 self.received_user_message("Him: "+decrypted_msg.decode(),self.talking_users[user_queue]['textbox'])
             
-            print('Received message from ',self.talking_users[user_queue]['username'] ,decrypted_msg.decode())
         elif action == 'rooms':
             rooms = tokens[1].split(',')
-            print('Received rooms ',rooms)
+            print('[+] Received rooms ',rooms)
         elif action =='joinedRoom':
             joinedRoom = tokens[1]
             self.selectedRoom = joinedRoom
-            print('Joined room: ',joinedRoom)
+            print('[+] Joined room: ',joinedRoom)
         elif action =='roomReceive':
             room = tokens[1]
             username = tokens[2]
             # encode message then decrypt it with user private key
             message = tokens[3].encode()
             decrypted_msg = rsa_decrypt(message, self.private_key)
-            print("This is PrivateKey of " + self.username + " : " + self.private_key.decode())
-            print("This is PubKey of " + self.username + " : " + self.public_key.decode())
-            print('Received msg at room, ',room,username,decrypted_msg.decode())
+            print('[+] Received msg at room (%s) from %s: %s '%(room,username,message.decode()))
+            if( username==self.username):
+                username="Me"
             self.send_message_insert("[%s] %s : %s"%(room,username,decrypted_msg.decode()))
         elif action =='left':
-            room = tokens[1]
-            print('Leaving room ',room)
+            #room = tokens[1]
+            print('[+] Leaving room ',room)
 
     def on_room_select(self, selection):
         # Note here that Tkinter passes an event object to onselect()
-        print('You selected room : "%s"' % selection)
+        print('[!] You selected room : "%s"' % selection)
         
         #Switching room
         if(self.selectedRoom != ''):
@@ -645,10 +637,10 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # Note here that Tkinter passes an event object to onselect()
         w = evt.widget
         index = int(w.curselection()[0])
-        print (w.get(index))
         value = w.get(index).lower().replace(' ','')
-        print('You selected user : "%s"' % value)
-        self.get_user_data(value)
+        print('[!] You selected user : "%s"' % value)
+        if(value not in [ obj['username']for obj in self.talking_users.values()]):
+            self.get_user_data(value)
         # quit chatbox user
         # if(self.selectedUser != ''):
 
@@ -860,7 +852,6 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         entry_frame.config(bg=bg2)
         ef_children = entry_frame.children.values()
         for child in list(tf_children) + list(ef_children):
-            print(type(child))
             if type(child) == tk.Entry:
                 child.config(bg=bg, fg=fg)
             if type(child) == tk.Button:
@@ -1158,7 +1149,6 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             default_window_size = ''.join(size)
 
         root.geometry(default_window_size)
-        print(default_window_size)
 
         # scrolls to very bottom of textbox
         def see_end():
@@ -1170,5 +1160,4 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 root = Tk()
 root.title("Talky Walky")
 root.geometry(default_window_size)
-print(default_window_size)
 root.minsize(360,200)
