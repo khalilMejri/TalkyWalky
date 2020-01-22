@@ -250,8 +250,12 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         # frame containing send button and emoji button
         def sending_message():
             sender = SenderBroker(userqueue)
+            # Get destination user pubkey
+            dest_user_pubkey = self.talking_users[userqueue]['pubkey']
             message = entry_field.get()
-            sender.send_message("messageSent::"+self.queue_name+"::"+message)
+            # Encrypt msg with dest user pubkey
+            encrypted_msg = rsa_encrypt(message, dest_user_pubkey)
+            sender.send_message("messageSent::"+self.queue_name+"::"+encrypted_msg.decode())
             text_box.configure(state=NORMAL)
             text_box.insert(END, str(time.strftime('%I:%M:%S ')) +'Me: '+ message+'\n')
             self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
@@ -575,30 +579,34 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             for i,name in enumerate(users_names):
                 self.usersPanel.insert(i,name)
             # TODO show the users
+        # The action for user who sent the demand to chat with another user: we get him username, queue and pubkey of dest
         elif action =='username':
-            username = tokens[1]
+            demanded_username = tokens[1]
             demanded_user_queue = tokens[2]
+            demanded_user_pubkey = tokens[3].encode()
             # adding the wanted user to talking users
-            tab,textbox = self.generate_tab(username,demanded_user_queue)
-            self.talking_users.setdefault(demanded_user_queue,{'username':username,'textbox':textbox})
+            tab,textbox = self.generate_tab(demanded_username,demanded_user_queue)
+            self.talking_users.setdefault(demanded_user_queue,{'username':demanded_username,'pubkey':demanded_user_pubkey,'textbox':textbox})
             
-            
-            print('Demanded user: ',username,demanded_user_queue)
-        elif action =='choosed':
+            print('Demanded user: ',demanded_username,demanded_user_queue)
+        # The action for a chosen user : we get him the sender's name, pubkey and queue  
+        elif action =='chosen':
             calling_username = tokens[1]
-            calling_user_queue = tokens[2]
+            calling_user_pubkey = tokens[2].encode()
+            calling_user_queue = tokens[3]
             # adding who want to talk to me in talking users
             tab,textbox = self.generate_tab(calling_username,calling_user_queue)
-            self.talking_users.setdefault(calling_user_queue,{'username':calling_username,'textbox':textbox})
+            self.talking_users.setdefault(calling_user_queue,{'username':calling_username,'pubkey':calling_user_pubkey,'textbox':textbox})
 
             print('Have been demanded from ', calling_username,calling_user_queue)
         elif action =='messageSent':
             user_queue = tokens[1]
-            message = tokens[2]
+            message = tokens[2].encode()
+            decrypted_msg = rsa_decrypt(message, self.private_key)
             if(user_queue in self.talking_users):
-                self.received_user_message("Him: "+message,self.talking_users[user_queue]['textbox'])
+                self.received_user_message("Him: "+decrypted_msg.decode(),self.talking_users[user_queue]['textbox'])
             
-            print('Received message from ',self.talking_users[user_queue]['username'] ,message)
+            print('Received message from ',self.talking_users[user_queue]['username'] ,decrypted_msg.decode())
         elif action == 'rooms':
             rooms = tokens[1].split(',')
             print('Received rooms ',rooms)

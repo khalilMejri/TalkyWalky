@@ -69,8 +69,8 @@ class Server:
             demanded_user_name = tokens[1]
             for key,val in self.connected_users.items():
                 if val['username'] == demanded_user_name:
-                    self.send(key,"choosed::"+self.connected_users[queue_name]+'::'+queue_name)
-                    self.send(queue_name,"username::"+str(val['username'])+"::"+str(key))
+                    self.send(key,"chosen::"+self.connected_users[queue_name]['username']+'::'+self.connected_users[queue_name]['pubkey']+'::'+queue_name)
+                    self.send(queue_name,"username::"+str(val['username'])+"::"+str(key)+"::"+val['pubkey'].decode())
                     return True
             self.send(queue_name,"notfound::")
             return False
