@@ -104,6 +104,7 @@ class LdapService():
         try:
             # add entry in the directory
             ldap_conn.add_s(dn, entry)
+            print("success")
             return None
         except Exception:
             return sys.exc_info()[0]
@@ -123,7 +124,7 @@ class LdapService():
 s = LdapService(admin_pwd="<ur_admin_pwd>")
 
 # test login
-# s.login(username="guest", password="0000")
+# s.login(username="hamma", password="0000")
 
 # test registration
 user_obj = {
