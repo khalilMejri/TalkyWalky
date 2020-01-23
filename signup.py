@@ -1,7 +1,7 @@
 from tkinter import Label, Entry, Button, Tk, Radiobutton, IntVar, StringVar, Toplevel, Canvas, X
 from ldap_server import LdapService
 from CA.ca_client import CaClient, handle_cert_local
-from main import *
+from chat import *
 import time
 
 
@@ -25,7 +25,7 @@ class SignupPage:
             print(user_obj)
             # instantiate the ldap service
             # ldap_s = LdapService(admin_pwd="<ur_admin_pwd>")
-            ldap_s = LdapService(admin_pwd="0927khalil")
+            ldap_s = LdapService(admin_pwd="<ur_admin_pwd>")
             result = ldap_s.register(user_obj)
 
             if not result:

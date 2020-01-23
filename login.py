@@ -1,7 +1,7 @@
 from tkinter import Label, Entry, Button, Tk, Radiobutton, IntVar, StringVar, Toplevel, Canvas, X
 from ldap_server import LdapService
 from CA.ca_client import CaClient, handle_cert_local
-from main import *
+from chat import *
 
 import time
 

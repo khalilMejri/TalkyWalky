@@ -1,53 +1,27 @@
+from PIL import Image, ImageTk
+import tkinter as tk
 import time
-from interface import *
-from sender import SenderBroker
-from receiver import ReceiverBroker
 
+IMAGE_PATH = './imgs/11.png'
+WIDTH, HEIGTH = 700, 500
 
-class Chatroom():
+screen = tk.Tk()
+screen.geometry('{}x{}'.format(WIDTH, HEIGTH))
 
-    # TODO memory leak
-    def on_closing(self):
-        # check if saving
-        # if not:
-        # listener.discard_channel()
-        self.root.destroy()
-        self.app.disconnect_from_server()
+canvas = tk.Canvas(screen, width=WIDTH, height=HEIGTH)
+canvas.pack()
 
-    def run(self, user):
-        self.root = Tk()
-        self.root.title("Talky Walky")
-        self.root.geometry(default_window_size)
-        self.root.minsize(360, 200)
+img = ImageTk.PhotoImage(Image.open(IMAGE_PATH).resize(
+    (WIDTH, HEIGTH), Image.ANTIALIAS))
+# Keep a reference in case this code is put in a function.
+canvas.background = img
+bg = canvas.create_image(0, 0, anchor=tk.NW, image=img)
 
-        # start application
-        #sender = SenderBroker()
-        #listener = ReceiverBroker()
+# Put a tkinter widget on the canvas.
+# button = tk.Button(screen, text="Start")
+# button_window = canvas.create_window(10, 10, anchor=tk.NW, window=button)
 
-        #sender.connect(exchange="room 1")
-        #listener.connect(exchange="room 1")
-
-        self.app = ChatInterface(self.root, fullname=user)
-        # connect
-        # app.connect_to_server('JOE')
-
-        # do what u want
-
-        # app.select_room('room1')
-        #app.send_msg_to_room('room1', 'hello man!')
-
-        # start consuming
-        # app.async_consumer()
-
-        self.app.default_format()
-
-        # listener.async_consumer(app.on_message_recieved)
-
-        # root is your root window
-        self.root.protocol('WM_DELETE_WINDOW', self.on_closing)
-
-        self.root.mainloop()
-
-
-# c = Chatroom()
-# c.run(user="self.USERNAME")
+screen.after(2500, screen.destroy)
+screen.mainloop()
+if True:
+    import login
