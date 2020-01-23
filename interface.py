@@ -52,7 +52,7 @@ else:
 
 class ChatInterface(Frame, SenderBroker, ReceiverBroker):
 
-    def __init__(self, master=None):
+    def __init__(self, master=None, fullname=""):
         Frame.__init__(self, master)
         self.master = master
         self.selectedRoom=''
@@ -60,7 +60,8 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         self.talking_users = {}
         self.tabs=[]
         self.theme_function=self.color_theme_hacker
-        self.username = ''.join(random.sample(string.ascii_lowercase,10)) #LDAP LOGIN RETURNS LATER
+        # self.username = ''.join(random.sample(string.ascii_lowercase,10)) #LDAP LOGIN RETURNS LATER
+        self.username = fullname
         #OUR CONNECTION, SHOULD ONLY HAVE ONE PER APP(CLIENT)
         self.connect_to_server(self.username)
 

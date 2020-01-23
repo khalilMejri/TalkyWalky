@@ -2,10 +2,10 @@ from PIL import Image, ImageTk
 import tkinter as tk
 import time
 
-IMAGE_PATH = './imgs/5.png'
+IMAGE_PATH = './imgs/11.png'
 WIDTH, HEIGTH = 600, 400
 
-screen = tk.Toplevel()
+screen = tk.Tk()
 screen.geometry('{}x{}'.format(WIDTH, HEIGTH))
 
 canvas = tk.Canvas(screen, width=WIDTH, height=HEIGTH)
@@ -21,7 +21,7 @@ bg = canvas.create_image(0, 0, anchor=tk.NW, image=img)
 # button = tk.Button(screen, text="Start")
 # button_window = canvas.create_window(10, 10, anchor=tk.NW, window=button)
 
-screen.after(2000, screen.destroy)
+screen.after(2500, screen.destroy)
 screen.mainloop()
 if True:
-    import main
+    import login
