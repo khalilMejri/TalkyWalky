@@ -263,6 +263,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             self.last_sent_label(str(time.strftime( "Last message sent: " + '%B %d, %Y' + ' at ' + '%I:%M %p')))
             text_box.see(END)
             text_box.configure(state=DISABLED)
+            entry_field.delete(0, END)
         # send button
         send_button = Button(entry_frame, text="Send", width=5, relief=GROOVE, bg='white',
                                   bd=1, command=lambda: sending_message(), activebackground="#FFFFFF",
@@ -271,6 +272,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         newTab.bind("<Return>", sending_message)
         
         self.notebook.add(newTab,text=username)
+        self.notebook.select(newTab)
         self.tabs.append(newTab)
         self.theme_function()
         return newTab,text_box
@@ -854,7 +856,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         ef_children = entry_frame.children.values()
         for child in list(tf_children) + list(ef_children):
             if type(child) == tk.Entry:
-                child.config(bg=bg, fg=fg)
+                child.config(bg=bg, fg=fg,insertbackground=fg)
             if type(child) == tk.Button:
                 child.config(bg=bg, fg=fg, activebackground=bg, activeforeground=fg)
             if type(child) == tk.Text:
