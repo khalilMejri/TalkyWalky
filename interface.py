@@ -138,7 +138,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
         help_option.add_command(label="room 1", command=lambda : self.on_room_select("room1"))
         help_option.add_command(label="room 2", command=lambda : self.on_room_select("room2"))
         help_option.add_command(label="room 3", command=lambda : self.on_room_select("room3"))
-        help_option.add_command(label="room 3", command=lambda : self.on_room_select("room4"))
+        help_option.add_command(label="room 4", command=lambda : self.on_room_select("room4"))
 
     # Help
         help_option = Menu(menu, tearoff=0)
@@ -697,9 +697,9 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
                               activeforeground=self.tl_fg, command=self.close_emoji)
         close_button.grid(sticky=S)
 
-        root_width = root.winfo_width()
-        root_pos_x = root.winfo_x()
-        root_pos_y = root.winfo_y()
+        root_width = 600
+        root_pos_x = 0
+        root_pos_y = 0
         selection_width_x = self.emoji_selection_window.winfo_reqwidth()
         selection_height_y = self.emoji_selection_window.winfo_reqheight()
 
@@ -813,7 +813,7 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
     def send_emoji(self, emoticon):
         self.entry_field.insert(END, emoticon)
         # following line would close emoji toplevel windwo, only allowing 1 emoji per opening of window
-        # self.close_emoji()
+        self.close_emoji()
 
     def close_emoji(self):
         self.emoji_selection_window.destroy()
@@ -1160,7 +1160,3 @@ class ChatInterface(Frame, SenderBroker, ReceiverBroker):
             self.text_box.configure(state=DISABLED)
         root.after(10, see_end)
 
-root = Tk()
-root.title("Talky Walky")
-root.geometry(default_window_size)
-root.minsize(360,200)

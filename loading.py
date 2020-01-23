@@ -3,7 +3,7 @@ import tkinter as tk
 import time
 
 IMAGE_PATH = './imgs/11.png'
-WIDTH, HEIGTH = 600, 400
+WIDTH, HEIGTH = 700, 500
 
 screen = tk.Tk()
 screen.geometry('{}x{}'.format(WIDTH, HEIGTH))

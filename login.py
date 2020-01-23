@@ -1,6 +1,8 @@
 from tkinter import Label, Entry, Button, Tk, Radiobutton, IntVar, StringVar, Toplevel, Canvas, X
 from ldap_server import LdapService
 from CA.ca_client import CaClient, handle_cert_local
+from main import *
+
 import time
 
 
@@ -16,8 +18,8 @@ class LoginPage:
             result = ldap_s.login(username=self.USERNAME.get(),
                                   password=self.PASSWORD.get())
             if not result:
-                self.USERNAME.set("")
-                self.PASSWORD.set("")
+                # self.USERNAME.set("")
+                # self.PASSWORD.set("")
                 # self.error_label.config(
                 #     text="Sucess", fg="#33FF33", bg="#336633")
 
@@ -36,9 +38,10 @@ class LoginPage:
                     text=result, fg="#0F0F0F", bg="#33FF33")
 
     def HomeWindow(self):
+        username = self.USERNAME.get()
         self.root.withdraw()
-        # import loading
-        import main
+        c = Chatroom()
+        c.run(user=username)
 
     def navigate_to_signup(self):
         from signup import SignupPage
