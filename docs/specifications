@@ -1,0 +1,53 @@
+************************
+cybersec specifications:
+************************
+-------------
+ client side
+-------------
+* register -> enter credentials (first time)
+* login / block authentication (redirect)
+* view all active users
+* select user to chat with -> chat area opened
+* using Python cryptography with RSA technique (Using pycrypto library) to decrypt all messages before sending between clients.
+* see msg date & time
+* quit conversation
+* disconnect && quit application (update users list)
+
+-------------
+ server side
+-------------
+* register user (1) -> enter credentials -> add new user to the active directory via LDAP (openLDAP API in linux)
+		        (2) -> create PKI -> sign the public key to enable secure encryption = certificate (authority server)
+		        (3) -> start communication with the backend server (chat server | rabbit MQ)
+
+* login user    (1) -> enter credentials -> verify user in the active directory via LDAP (openLDAP API in linux)
+		        (2) -> create PKI -> verify the signature of the public key to enable secure encryption = certificate (authority server)
+		        (3) -> restore last communication session with the backend server (chat server with sockets | rabbit MQ)
+
+* chatting      (1) -> encrypt and decrypt all messages before sending between clients (Using pycrypto library RSA) 
+		        (2) -> restore last communication session with the backend server (chat server | rabbit MQ)
+
+
+
+***********
+references
+***********
+-- chat apps using python
+https://github.com/t7hm1/pchat
+https://github.com/mikegpl/pychat
+https://codereview.stackexchange.com/questions/214788/socket-chat-room-made-with-tkinter-python
+
+-- Api LDAP for python
+https://github.com/python-ldap/python-ldap
+http://python-ldap.org/en/python-ldap-3.2.0/
+https://gist.github.com/ibeex/1288159
+
+-- Python interface to OpenSSL
+https://www.pyopenssl.org/en/stable/api.html
+
+-- LDAP configuration on linux 
+https://help.ubuntu.com/lts/serverguide/openldap-server.html
+http://blog.emfeld.com/2013/03/ldap-login-authentication-using-python.html
+
+-- LDAP protocol intro
+https://www.youtube.com/watch?v=5rEA7vRV3VE
