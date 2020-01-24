@@ -39,6 +39,9 @@ When thinking of chatroom capabilities, our elegant application you will need th
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ![Demo architecture](https://i.ibb.co/zx75pzD/arch.png)
 
+![Demo encryption](https://github.com/khalilMejri/TalkyWalky/blob/master/docs/Annotation%202020-01-23%20214852.png)
+
+
 ## Features:
 
 - Save a log of the chat
@@ -142,5 +145,5 @@ You can now connect to `ldap:<ur_ldap_host_address>:389` to start chatting.
 
 ### Refs
 
-[http://www.grotan.com/ldap/python-ldap-samples.html](http://www.grotan.com/ldap/python-ldap-samples.html)
+[http://www.grotan.com/ldap/python-ldap-samples.html](http://www.grotan.com/ldap/python-ldap-samples.html) <br/>
 [https://turbogears.readthedocs.io/en/latest/cookbook/ldap-auth.html](https://turbogears.readthedocs.io/en/latest/cookbook/ldap-auth.html)
